@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from pathlib import Path
 from db.neon import get_connection
+from routes.chat import router as chat_router
 
 load_dotenv(dotenv_path=Path(__file__).parent / ".env")
 
@@ -15,6 +16,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(chat_router, prefix="/api")
 
 
 @app.get("/health")
