@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from agents.teaching_agent import teach_topic
 from agents.quiz_agent import generate_quiz, evaluate_quiz
+from agents.prerequisites_agent import generate_prerequisites
 
 router = APIRouter()
 
@@ -23,6 +24,10 @@ class QuizEvaluateRequest(BaseModel):
     topic_title: str
     questions: list
     answers: list
+
+class PrerequisitesRequest(BaseModel):
+    goal: str
+    level: str
 
 
 @router.post("/teach")
@@ -61,5 +66,17 @@ def quiz_evaluate(request: QuizEvaluateRequest):
             answers=request.answers,
         )
         return {"success": True, "results": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/prerequisites")
+def prerequisites(request: PrerequisitesRequest):
+    try:
+        result = generate_prerequisites(
+            goal=request.goal,
+            level=request.level,
+        )
+        return {"success": True, "prerequisites": result}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
