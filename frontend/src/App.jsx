@@ -1,5 +1,9 @@
 import { useState, useEffect, useRef } from "react"
 import axios from "axios"
+import TopicView from "./components/TopicView"
+import { useCourseProgress } from "./hooks/useCourseProgress"
+import Sidebar from "./components/Sidebar"
+import Prerequisites from "./components/Prerequisites"
 
 const API = "http://127.0.0.1:8000/api"
 
@@ -52,6 +56,34 @@ export default function App() {
   const [error, setError] = useState("")
   const [finalized, setFinalized] = useState(false)
   const [openSection, setOpenSection] = useState(1)
+  const [showPrereqs, setShowPrereqs] = useState(false)
+
+// Teaching mode state
+  const [teaching, setTeaching] = useState(false)
+  const [currentModuleIdx, setCurrentModuleIdx] = useState(0)
+  const [currentTopicIdx, setCurrentTopicIdx] = useState(0)
+
+  const {
+    progress,
+    initProgress,
+    markTopicComplete,
+    setLocation,
+    getTopicState,
+    jumpToTopic,
+    clearProgress,
+  } = useCourseProgress()
+
+  // Restore from localStorage on app load
+  useEffect(() => {
+    const saved = progress
+    if (saved?.roadmap) {
+      setRoadmap(saved.roadmap)
+      setCurrentModuleIdx(saved.currentModule)
+      setCurrentTopicIdx(saved.currentTopic)
+      setFinalized(true)
+      setTeaching(true)
+    }
+  }, [])
 
   const goalDone = goal.trim().length > 0 && openSection > 1
   const levelDone = level !== "" && openSection > 2
@@ -99,10 +131,146 @@ export default function App() {
   function handleStartOver() {
     setGoal(""); setLevel(""); setHours(5); setObjective("")
     setRoadmap(null); setError(""); setFinalized(false)
-    setOpenSection(1)
+    setOpenSection(1); setTeaching(false)
+    setCurrentModuleIdx(0); setCurrentTopicIdx(0)
+    clearProgress()
     window.scrollTo({ top: 0, behavior: "smooth" })
   }
 
+  function handleTopicComplete() {
+    const mod = roadmap.modules[currentModuleIdx]
+    const nextTopicIdx = currentTopicIdx + 1
+
+    // Save completion to localStorage
+    markTopicComplete(currentModuleIdx, currentTopicIdx, roadmap)
+
+    if (nextTopicIdx < mod.topics.length) {
+      setCurrentTopicIdx(nextTopicIdx)
+    } else {
+      const nextModuleIdx = currentModuleIdx + 1
+      if (nextModuleIdx < roadmap.modules.length) {
+        setCurrentModuleIdx(nextModuleIdx)
+        setCurrentTopicIdx(0)
+      } else {
+        setTeaching(false)
+        setFinalized(false)
+        setRoadmap(null)
+        clearProgress()
+        alert("🎉 You completed the entire course! Amazing work.")
+      }
+    }
+  }
+
+  function handleTopicSkip() {
+    handleTopicComplete()
+  }
+
+  // Total topics for progress bar
+  const totalTopics = roadmap
+    ? roadmap.modules.reduce((a, m) => a + m.topics.length, 0)
+    : 0
+  const completedTopics = roadmap
+    ? roadmap.modules.slice(0, currentModuleIdx).reduce((a, m) => a + m.topics.length, 0) + currentTopicIdx
+    : 0
+  
+  
+  // ─── PREREQUISITES SCREEN ────────────────────────────────────
+  if (showPrereqs && roadmap && !teaching) {
+    return (
+      <div className="min-h-screen" style={{ background: "#FFFFFF" }}>
+        <nav style={{ borderBottom: "1px solid #F3F4F6", height: "60px" }}
+          className="flex items-center justify-between px-8 sticky top-0 bg-white z-10">
+          <span className="text-2xl font-extrabold gradient-text">Miss Nova</span>
+          <button onClick={() => setShowPrereqs(false)} style={{
+            fontSize: "14px", padding: "8px 16px", borderRadius: "10px",
+            background: "#F3F4F6", color: "#6B7280", border: "1.5px solid #E5E7EB",
+            cursor: "pointer", fontWeight: 600
+          }}>
+            ← Back
+          </button>
+        </nav>
+        <Prerequisites
+          roadmap={roadmap}
+          goal={goal}
+          level={level}
+          onReady={() => {
+            setShowPrereqs(false)
+            setCurrentModuleIdx(0)
+            setCurrentTopicIdx(0)
+            setTeaching(true)
+          }}
+        />
+      </div>
+    )
+  }
+
+  // ─── TEACHING MODE ───────────────────────────────────────────
+  if (teaching && roadmap) {
+    const mod = roadmap.modules[currentModuleIdx]
+    const topic = mod?.topics[currentTopicIdx]
+
+    return (
+      <div className="min-h-screen" style={{ background: "#FFFFFF" }}>
+
+        {/* Nav */}
+        <nav style={{ borderBottom: "1px solid #F3F4F6", height: "60px" }}
+          className="flex items-center justify-between px-8 sticky top-0 bg-white z-10">
+          <span className="text-2xl font-extrabold gradient-text">Miss Nova</span>
+          <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+            <span style={{ fontSize: "13px", color: "#6B7280" }}>
+              Topic {completedTopics + 1} of {totalTopics}
+            </span>
+            <button onClick={() => setTeaching(false)} style={{
+              fontSize: "14px", padding: "8px 16px", borderRadius: "10px",
+              background: "#F3F4F6", color: "#6B7280", border: "1.5px solid #E5E7EB",
+              cursor: "pointer", fontWeight: 600
+            }}>
+              ← Roadmap
+            </button>
+          </div>
+        </nav>
+
+        {/* Progress bar */}
+        <div style={{ background: "#F3F4F6", height: "4px" }}>
+          <div style={{
+            height: "4px",
+            background: "linear-gradient(135deg, #7C3AED, #10B981)",
+            width: `${totalTopics > 0 ? (completedTopics / totalTopics) * 100 : 0}%`,
+            transition: "width 0.5s ease"
+          }} />
+        </div>
+
+        {/* Sidebar + Content */}
+        <div style={{ display: "flex" }}>
+          <Sidebar
+            roadmap={roadmap}
+            currentModuleIdx={currentModuleIdx}
+            currentTopicIdx={currentTopicIdx}
+            getTopicState={getTopicState}
+            onTopicSelect={(mi, ti) => {
+              setCurrentModuleIdx(mi)
+              setCurrentTopicIdx(ti)
+              jumpToTopic(mi, ti)
+            }}
+          />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            {topic && (
+              <TopicView
+                topic={topic}
+                module={mod}
+                course={roadmap}
+                onComplete={handleTopicComplete}
+                onSkip={handleTopicSkip}
+              />
+            )}
+          </div>
+        </div>
+
+      </div>
+    )
+  }
+
+  // ─── MAIN ONBOARDING + ROADMAP MODE ──────────────────────────
   return (
     <div className="min-h-screen" style={{ background: "#FFFFFF" }}>
 
@@ -116,10 +284,9 @@ export default function App() {
         </span>
       </nav>
 
-      {/* Main content — wider and centered */}
       <div style={{ maxWidth: "780px", margin: "0 auto", padding: "48px 24px" }}>
 
-        {/* Hero — fully centered */}
+        {/* Hero */}
         <div style={{ textAlign: "center", marginBottom: "48px" }}>
           <div style={{ fontSize: "72px", marginBottom: "20px" }}>👩‍🏫</div>
           <h1 style={{
@@ -158,8 +325,7 @@ export default function App() {
                   width: "100%", padding: "14px 16px", borderRadius: "12px",
                   border: `1.5px solid ${goal ? "#7C3AED" : "#E5E7EB"}`,
                   fontSize: "16px", color: "#111827", outline: "none",
-                  fontFamily: "Inter, sans-serif", marginBottom: "12px",
-                  display: "block"
+                  fontFamily: "Inter, sans-serif", marginBottom: "12px", display: "block"
                 }}
               />
               <button className="btn-primary" style={{ width: "100%" }}
@@ -266,8 +432,6 @@ export default function App() {
         {/* Roadmap */}
         {roadmap && !loading && (
           <div ref={roadmapRef}>
-
-            {/* Roadmap header */}
             <div style={{ textAlign: "center", marginBottom: "32px" }}>
               <p style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "2px", color: "#10B981", marginBottom: "8px" }}>
                 YOUR PERSONALIZED ROADMAP
@@ -292,7 +456,7 @@ export default function App() {
               )}
             </div>
 
-            {/* Modules — editable view */}
+            {/* Editable modules */}
             {!finalized && roadmap.modules.map((mod, mi) => (
               <div key={mod.id} className="section-card" style={{ marginBottom: "16px" }}>
                 <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "12px", marginBottom: "16px" }}>
@@ -348,7 +512,7 @@ export default function App() {
               </div>
             ))}
 
-            {/* Modules — finalized view */}
+            {/* Finalized modules */}
             {finalized && roadmap.modules.map((mod, mi) => (
               <div key={mod.id} className="section-card"
                 style={{ marginBottom: "16px", borderColor: "#D1FAE5" }}>
@@ -394,7 +558,10 @@ export default function App() {
               {!finalized ? (
                 <>
                   <button className="btn-success" style={{ flex: 1, fontSize: "16px" }}
-                    onClick={() => setFinalized(true)}>
+                    onClick={() => {
+                      initProgress(roadmap)
+                      setFinalized(true)
+                    }}>
                     ✅ Finalize Roadmap
                   </button>
                   <button onClick={handleStartOver} style={{
@@ -416,8 +583,12 @@ export default function App() {
                       Roadmap finalized!
                     </p>
                     <p style={{ fontSize: "14px", color: "#047857", marginTop: "4px" }}>
-                      Miss Nova is ready to start teaching. Coming soon!
+                      Miss Nova is ready to start teaching.
                     </p>
+                    <button className="btn-primary" style={{ marginTop: "16px", fontSize: "16px" }}
+                      onClick={() => setShowPrereqs(true)}>
+                      Start learning →
+                    </button>
                   </div>
                   <button onClick={handleStartOver} style={{
                     width: "100%", padding: "14px", borderRadius: "12px",
