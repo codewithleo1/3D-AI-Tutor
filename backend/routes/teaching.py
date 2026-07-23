@@ -34,12 +34,6 @@ class PracticeRequest(BaseModel):
     module_title: str
     course_title: str
     level: str = "beginner"
-class PracticeRequest(BaseModel):
-    topic_title: str
-    topic_description: str
-    module_title: str
-    course_title: str
-    level: str = "beginner"
 
 class RepairRequest(BaseModel):
     topic_title: str
@@ -112,19 +106,6 @@ def practice(request: PracticeRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.post("/practice")
-def practice(request: PracticeRequest):
-    try:
-        result = generate_practice(
-            topic_title=request.topic_title,
-            topic_description=request.topic_description,
-            module_title=request.module_title,
-            course_title=request.course_title,
-            level=request.level,
-        )
-        return {"success": True, "practice": result}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/repair")
 def repair(request: RepairRequest):
