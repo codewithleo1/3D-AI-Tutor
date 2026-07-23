@@ -1,8 +1,8 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from agents.teaching_agent import teach_topic
 from agents.quiz_agent import generate_quiz, evaluate_quiz
 from agents.prerequisites_agent import generate_prerequisites
+from agents.teaching_agent import teach_topic, generate_practice
 
 router = APIRouter()
 
@@ -28,6 +28,19 @@ class QuizEvaluateRequest(BaseModel):
 class PrerequisitesRequest(BaseModel):
     goal: str
     level: str
+
+class PracticeRequest(BaseModel):
+    topic_title: str
+    topic_description: str
+    module_title: str
+    course_title: str
+    level: str = "beginner"
+class PracticeRequest(BaseModel):
+    topic_title: str
+    topic_description: str
+    module_title: str
+    course_title: str
+    level: str = "beginner"
 
 
 @router.post("/teach")
@@ -78,5 +91,34 @@ def prerequisites(request: PrerequisitesRequest):
             level=request.level,
         )
         return {"success": True, "prerequisites": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/practice")
+def practice(request: PracticeRequest):
+    try:
+        result = generate_practice(
+            topic_title=request.topic_title,
+            topic_description=request.topic_description,
+            module_title=request.module_title,
+            course_title=request.course_title,
+            level=request.level,
+        )
+        return {"success": True, "practice": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/practice")
+def practice(request: PracticeRequest):
+    try:
+        result = generate_practice(
+            topic_title=request.topic_title,
+            topic_description=request.topic_description,
+            module_title=request.module_title,
+            course_title=request.course_title,
+            level=request.level,
+        )
+        return {"success": True, "practice": result}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

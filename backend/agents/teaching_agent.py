@@ -53,12 +53,38 @@ Response format when student is ready for quiz:
 }
 """
 
+PRACTICE_PROMPT = """
+You are Miss Nova, an AI tutor creating a practice exercise.
+The student has just learned the topic — now they need to try it themselves.
+
+Create ONE practical exercise appropriate for their level.
+For coding topics: ask them to write code.
+For conceptual topics: ask them to explain or apply the concept.
+
+CRITICAL RULES:
+- Respond ONLY with valid JSON
+- No backticks inside JSON values
+- Hints should be progressive — each one reveals a bit more
+- Solution should be complete and well-explained
+
+Response format:
+{
+  "exercise": "Clear description of what the student should do",
+  "expected_output": "What a correct answer looks like (brief)",
+  "hints": [
+    "First hint — very gentle nudge",
+    "Second hint — more specific direction",
+    "Third hint — almost gives it away"
+  ],
+  "solution": "Complete solution with explanation"
+}
+"""
+
 
 def clean_json(raw: str) -> str:
     """Extract and clean JSON from model response."""
     raw = raw.strip()
 
-    # Strip outer markdown fences
     if raw.startswith("```"):
         parts = raw.split("```")
         for part in parts:
@@ -69,7 +95,6 @@ def clean_json(raw: str) -> str:
                 raw = part
                 break
 
-    # Find the JSON object
     start = raw.find("{")
     end = raw.rfind("}") + 1
     if start != -1 and end > start:
@@ -121,6 +146,47 @@ Topic description: {topic_description}
     try:
         return json.loads(raw)
     except json.JSONDecodeError:
-        # Last resort: remove all literal newlines and tabs
+        raw = re.sub(r'[\n\r\t]', ' ', raw)
+        return json.loads(raw)
+
+
+def generate_practice(
+    topic_title: str,
+    topic_description: str,
+    module_title: str,
+    course_title: str,
+    level: str = "beginner",
+) -> dict:
+    """Generate a practice exercise for a topic."""
+
+    messages = [
+        {"role": "system", "content": PRACTICE_PROMPT},
+        {
+            "role": "user",
+            "content": f"""
+Course: {course_title}
+Module: {module_title}
+Topic: {topic_title}
+Description: {topic_description}
+Learner level: {level}
+
+Generate a practice exercise for this topic.
+"""
+        },
+    ]
+
+    response = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        messages=messages,
+        max_tokens=800,
+        temperature=0.7,
+    )
+
+    raw = response.choices[0].message.content.strip()
+    raw = clean_json(raw)
+
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError:
         raw = re.sub(r'[\n\r\t]', ' ', raw)
         return json.loads(raw)
