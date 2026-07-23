@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from agents.quiz_agent import generate_quiz, evaluate_quiz, repair_concepts
 from agents.prerequisites_agent import generate_prerequisites
 from agents.teaching_agent import teach_topic, generate_practice
+from db.queries import save_course, save_progress, load_latest_progress, create_session
 
 router = APIRouter()
 
@@ -115,5 +116,67 @@ def repair(request: RepairRequest):
             failed_concepts=request.failed_concepts,
         )
         return {"success": True, "repair": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class SaveCourseRequest(BaseModel):
+    session_id: str
+    course_id: str
+    goal: str
+    level: str
+    roadmap: dict
+
+
+class SaveProgressRequest(BaseModel):
+    session_id: str
+    course_id: str
+    completed_topics: list
+    current_module: int
+    current_topic: int
+
+
+class LoadProgressRequest(BaseModel):
+    session_id: str
+
+
+@router.post("/progress/save-course")
+def save_course_route(request: SaveCourseRequest):
+    try:
+        create_session(request.session_id, request.goal, request.level)
+        save_course(request.course_id, request.session_id, request.roadmap)
+        return {"success": True}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/progress/save")
+def save_progress_route(request: SaveProgressRequest):
+    try:
+        save_progress(
+            request.session_id, request.course_id,
+            request.completed_topics, request.current_module, request.current_topic
+        )
+        return {"success": True}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/progress/load")
+def load_progress_route(request: LoadProgressRequest):
+    try:
+        result = load_latest_progress(request.session_id)
+        if not result:
+            return {"success": True, "progress": None}
+        return {
+            "success": True,
+            "progress": {
+                "roadmap": result["roadmap"],
+                "completed_topics": result["completed_topics"],
+                "current_module": result["current_module"],
+                "current_topic": result["current_topic"],
+                "course_id": result["course_id"],
+            }
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

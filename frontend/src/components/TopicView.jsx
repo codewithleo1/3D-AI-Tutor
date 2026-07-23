@@ -4,7 +4,7 @@ import Editor from "@monaco-editor/react"
 
 const API = "http://127.0.0.1:8000/api"
 
-export default function TopicView({ topic, module: mod, course, onComplete, onSkip }) {
+export default function TopicView({ topic, module: mod, course, level, onComplete, onSkip }) {
   const [phase, setPhase] = useState("loading") // loading | teaching | practice | quiz | result
   const [teaching, setTeaching] = useState(null)
   const [history, setHistory] = useState([])
@@ -95,7 +95,7 @@ export default function TopicView({ topic, module: mod, course, onComplete, onSk
         topic_description: topic.description || "",
         module_title: mod.title,
         course_title: course.title,
-        level: "beginner",
+        level: level || "beginner",
       })
       setPractice(res.data.practice)
       setPracticeAnswer("")

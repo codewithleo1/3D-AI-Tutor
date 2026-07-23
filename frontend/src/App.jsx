@@ -259,6 +259,7 @@ export default function App() {
                 topic={topic}
                 module={mod}
                 course={roadmap}
+                level={level}
                 onComplete={handleTopicComplete}
                 onSkip={handleTopicSkip}
               />
