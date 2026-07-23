@@ -22,8 +22,11 @@ export default function TopicView({ topic, module: mod, course, level, onComplet
   const [error, setError] = useState("")
   const [repair, setRepair] = useState(null)
   const [repairLoading, setRepairLoading] = useState(false)
+  const [practiceEval, setPracticeEval] = useState(null)
+  const [practiceEvalLoading, setPracticeEvalLoading] = useState(false)
 
   useEffect(() => {
+    setPracticeEval(null)
     loadTeaching([])
   }, [topic.id])
 
@@ -33,7 +36,7 @@ export default function TopicView({ topic, module: mod, course, level, onComplet
     setPractice(null)
     setPracticeAnswer("")
     setHintsShown(0)
-    setShowSolution(false)
+    setShowSolution(null)
     try {
       const res = await axios.post(`${API}/teach`, {
         topic_title: topic.title,
@@ -88,6 +91,7 @@ export default function TopicView({ topic, module: mod, course, level, onComplet
 
   async function loadPractice() {
     setPracticeLoading(true)
+    setPracticeEval(null)
     setPhase("loading")
     try {
       const res = await axios.post(`${API}/practice`, {
@@ -107,6 +111,24 @@ export default function TopicView({ topic, module: mod, course, level, onComplet
       await loadQuiz()
     } finally {
       setPracticeLoading(false)
+    }
+  }
+
+  async function submitPractice() {
+    if (!practiceAnswer.trim()) return
+    setPracticeEvalLoading(true)
+    try {
+      const res = await axios.post(`${API}/practice/evaluate`, {
+        topic_title: topic.title,
+        exercise: practice.exercise,
+        expected_output: practice.expected_output || "",
+        student_answer: practiceAnswer,
+      })
+      setPracticeEval(res.data.evaluation)
+    } catch {
+      setError("Couldn't evaluate your answer. You can still proceed to the quiz.")
+    } finally {
+      setPracticeEvalLoading(false)
     }
   }
 
@@ -468,12 +490,75 @@ export default function TopicView({ topic, module: mod, course, level, onComplet
             </div>
           )}
 
+          {/* Practice evaluation feedback */}
+          {practiceEval && (
+            <div style={{
+              background: practiceEval.passed ? "#F0FDF4" : "#FFF7ED",
+              border: `1.5px solid ${practiceEval.passed ? "#BBF7D0" : "#FED7AA"}`,
+              borderRadius: "16px", padding: "20px", marginBottom: "16px"
+            }}>
+              <div style={{ display: "flex", gap: "10px", alignItems: "flex-start",
+                marginBottom: "8px" }}>
+                <span style={{ fontSize: "20px" }}>
+                  {practiceEval.score === "correct" ? "✅"
+                    : practiceEval.score === "partial" ? "🟡" : "❌"}
+                </span>
+                <div>
+                  <p style={{ fontWeight: 700, fontSize: "13px", marginBottom: "4px",
+                    color: practiceEval.passed ? "#065F46" : "#92400E" }}>
+                    {practiceEval.score === "correct" ? "Correct!"
+                      : practiceEval.score === "partial" ? "Partially correct"
+                      : "Not quite — here's why:"}
+                  </p>
+                  <p style={{ fontSize: "14px", lineHeight: 1.7,
+                    color: practiceEval.passed ? "#166534" : "#78350F" }}>
+                    {practiceEval.feedback}
+                  </p>
+                  {practiceEval.improvement && (
+                    <p style={{ fontSize: "13px", marginTop: "8px",
+                      color: "#6B7280", fontStyle: "italic" }}>
+                      💡 {practiceEval.improvement}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Actions */}
           <div style={{ display: "flex", gap: "10px", marginTop: "8px" }}>
-            <button className="btn-success" style={{ flex: 1, fontSize: "15px" }}
-              onClick={loadQuiz}>
-              Done — Take the quiz 🧠
-            </button>
+            {!practiceEval ? (
+              <>
+                <button
+                  className="btn-primary"
+                  style={{ flex: 1, fontSize: "15px" }}
+                  onClick={submitPractice}
+                  disabled={!practiceAnswer.trim() || practiceEvalLoading}>
+                  {practiceEvalLoading ? "Miss Nova is checking..." : "Submit answer ✓"}
+                </button>
+                <button className="btn-success" style={{ flex: 1, fontSize: "15px" }}
+                  onClick={loadQuiz}>
+                  Skip to quiz →
+                </button>
+              </>
+            ) : (
+              <>
+                <button className="btn-success" style={{ flex: 1, fontSize: "15px" }}
+                  onClick={loadQuiz}>
+                  Take the quiz 🧠
+                </button>
+                <button onClick={() => {
+                  setPracticeEval(null)
+                  setPracticeAnswer("")
+                }} style={{
+                  padding: "14px 20px", borderRadius: "12px", fontWeight: 600,
+                  fontSize: "14px", background: "#F3F4F6", color: "#6B7280",
+                  border: "1.5px solid #E5E7EB", cursor: "pointer"
+                }}>
+                  Try again
+                </button>
+              </>
+            )}
             <button onClick={() => setPhase("teaching")} style={{
               padding: "14px 20px", borderRadius: "12px", fontWeight: 600,
               fontSize: "14px", background: "#F3F4F6", color: "#6B7280",

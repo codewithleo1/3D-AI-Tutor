@@ -190,3 +190,64 @@ Generate a practice exercise for this topic.
     except json.JSONDecodeError:
         raw = re.sub(r'[\n\r\t]', ' ', raw)
         return json.loads(raw)
+
+PRACTICE_EVALUATE_PROMPT = """
+You are Miss Nova, evaluating a student's practice exercise attempt.
+
+Be encouraging but honest. Your feedback should help them improve.
+
+Rules:
+- If the answer is correct or mostly correct: celebrate briefly, explain what's good
+- If the answer is wrong or incomplete: be kind, explain what's missing, give a nudge
+- Never just say "wrong" — always explain WHY and point toward the correct direction
+- Keep feedback to 3-4 sentences maximum
+- End with one specific improvement suggestion if needed
+
+Respond ONLY in this JSON format:
+{
+  "passed": true,
+  "score": "correct|partial|incorrect",
+  "feedback": "Your encouraging feedback here",
+  "improvement": "One specific thing they can improve, or empty string if fully correct"
+}
+"""
+
+
+def evaluate_practice(
+    topic_title: str,
+    exercise: str,
+    expected_output: str,
+    student_answer: str,
+) -> dict:
+    """Evaluate a student's practice exercise answer."""
+
+    messages = [
+        {"role": "system", "content": PRACTICE_EVALUATE_PROMPT},
+        {
+            "role": "user",
+            "content": f"""
+Topic: {topic_title}
+Exercise: {exercise}
+Expected output: {expected_output}
+Student's answer: {student_answer}
+
+Evaluate this answer.
+"""
+        },
+    ]
+
+    response = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        messages=messages,
+        max_tokens=400,
+        temperature=0.3,
+    )
+
+    raw = response.choices[0].message.content.strip()
+    raw = clean_json(raw)
+
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        raw = re.sub(r'[\n\r\t]', ' ', raw)
+        return json.loads(raw)

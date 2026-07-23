@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from agents.quiz_agent import generate_quiz, evaluate_quiz, repair_concepts
 from agents.prerequisites_agent import generate_prerequisites
-from agents.teaching_agent import teach_topic, generate_practice
+from agents.teaching_agent import teach_topic, generate_practice, evaluate_practice
 from db.queries import save_course, save_progress, load_latest_progress, create_session
 
 router = APIRouter()
@@ -178,5 +178,25 @@ def load_progress_route(request: LoadProgressRequest):
                 "course_id": result["course_id"],
             }
         }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+class PracticeEvaluateRequest(BaseModel):
+    topic_title: str
+    exercise: str
+    expected_output: str
+    student_answer: str
+
+
+@router.post("/practice/evaluate")
+def practice_evaluate(request: PracticeEvaluateRequest):
+    try:
+        result = evaluate_practice(
+            topic_title=request.topic_title,
+            exercise=request.exercise,
+            expected_output=request.expected_output,
+            student_answer=request.student_answer,
+        )
+        return {"success": True, "evaluation": result}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
