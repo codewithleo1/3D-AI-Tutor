@@ -20,6 +20,8 @@ export default function TopicView({ topic, module: mod, course, onComplete, onSk
   const [quizLoading, setQuizLoading] = useState(false)
   const [results, setResults] = useState(null)
   const [error, setError] = useState("")
+  const [repair, setRepair] = useState(null)
+  const [repairLoading, setRepairLoading] = useState(false)
 
   useEffect(() => {
     loadTeaching([])
@@ -145,10 +147,32 @@ export default function TopicView({ topic, module: mod, course, onComplete, onSk
     }
   }
 
+  async function loadRepair() {
+    console.log("loadRepair called, failed_concepts:", results?.failed_concepts)
+    setRepairLoading(true)
+    setPhase("loading")
+    console.log("Calling repair with:", topic.title, results?.failed_concepts)
+    try {
+      const res = await axios.post(`${API}/repair`, {
+        topic_title: topic.title,
+        failed_concepts: results.failed_concepts || [],
+      })
+      setRepair(res.data.repair)
+      setPhase("repair")
+    } catch (err) {
+      console.error("Repair error:", err)
+      setPhase("result")
+      setError("Couldn't load repair: " + err.message)
+    } finally {
+      setRepairLoading(false)
+    }
+  }
+
   // Phase indicator dots
   const phases = ["teaching", "practice", "quiz", "result"]
   const phaseLabels = ["Learn", "Practice", "Quiz", "Result"]
-  const currentPhaseIdx = phases.indexOf(phase)
+  const displayPhase = phase === "repair" ? "result" : phase
+  const currentPhaseIdx = phases.indexOf(displayPhase)
 
   return (
     <div style={{ maxWidth: "780px", margin: "0 auto", padding: "32px 24px" }}>
@@ -547,6 +571,118 @@ export default function TopicView({ topic, module: mod, course, onComplete, onSk
         </div>
       )}
 
+      {/* ── REPAIR PHASE ── */}
+      {phase === "repair" && repair && (
+        <div>
+          {/* Header */}
+          <div style={{
+            background: "#FFF7ED", border: "1.5px solid #FED7AA",
+            borderRadius: "20px", padding: "24px", marginBottom: "20px"
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px",
+              marginBottom: "12px" }}>
+              <span style={{ fontSize: "24px" }}>🔄</span>
+              <span style={{ fontWeight: 700, color: "#92400E", fontSize: "16px" }}>
+                Let's look at this differently
+              </span>
+            </div>
+            <p style={{ color: "#78350F", fontSize: "14px", lineHeight: 1.6 }}>
+              You got some questions wrong — that's completely normal. Miss Nova will
+              re-explain just the parts you found tricky.
+            </p>
+          </div>
+
+          {/* Re-explanation */}
+          <div style={{
+            background: "#F9FAFB", border: "1.5px solid #E5E7EB",
+            borderRadius: "20px", padding: "28px", marginBottom: "20px"
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px",
+              marginBottom: "16px" }}>
+              <span style={{ fontSize: "28px" }}>👩‍🏫</span>
+              <span style={{ fontWeight: 700, color: "#111827", fontSize: "16px" }}>
+                Miss Nova
+              </span>
+            </div>
+            <p style={{ color: "#374151", lineHeight: 1.8, fontSize: "15px",
+              whiteSpace: "pre-wrap" }}>
+              {repair.explanation}
+            </p>
+          </div>
+
+          {/* Example */}
+          {repair.example_text && (
+            <div style={{
+              background: "#EDE9FE", border: "1.5px solid #C4B5FD",
+              borderRadius: "20px", padding: "24px", marginBottom: "20px"
+            }}>
+              <p style={{ fontSize: "12px", fontWeight: 700, color: "#7C3AED",
+                letterSpacing: "1px", marginBottom: "10px" }}>
+                💡 DIFFERENT ANGLE
+              </p>
+              <p style={{ color: "#4C1D95", lineHeight: 1.7, fontSize: "15px" }}>
+                {repair.example_text}
+              </p>
+            </div>
+          )}
+
+          {/* Code */}
+          {repair.code && repair.code.trim() !== "" && (
+            <div style={{ marginBottom: "20px", borderRadius: "16px",
+              overflow: "hidden", border: "1.5px solid #E5E7EB" }}>
+              <div style={{ background: "#1E1E1E", padding: "10px 16px",
+                display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <span style={{ color: "#9CA3AF", fontSize: "12px", fontWeight: 600 }}>
+                  {repair.code_language?.toUpperCase() || "CODE"}
+                </span>
+                <span style={{ color: "#6B7280", fontSize: "11px" }}>
+                  Miss Nova's example
+                </span>
+              </div>
+              <Editor
+                height="180px"
+                language={repair.code_language || "python"}
+                value={repair.code.replace(/\\n/g, "\n")}
+                theme="vs-dark"
+                options={{
+                  readOnly: true, minimap: { enabled: false },
+                  fontSize: 14, lineNumbers: "on",
+                  scrollBeyondLastLine: false, wordWrap: "on",
+                }}
+              />
+            </div>
+          )}
+
+          {/* Check in */}
+          {repair.check_in && (
+            <div style={{
+              background: "#F0FDF4", border: "1.5px solid #BBF7D0",
+              borderRadius: "16px", padding: "20px", marginBottom: "24px"
+            }}>
+              <p style={{ color: "#166534", fontSize: "15px" }}>
+                🤔 {repair.check_in}
+              </p>
+            </div>
+          )}
+
+          {/* Actions */}
+          <div style={{ display: "flex", gap: "10px" }}>
+            <button className="btn-success" style={{ flex: 1, fontSize: "15px" }}
+              onClick={loadQuiz}>
+              Ready — Retry the quiz 🧠
+            </button>
+            <button onClick={() => loadTeaching([])} style={{
+              padding: "14px 20px", borderRadius: "12px", fontWeight: 600,
+              fontSize: "14px", background: "#F3F4F6", color: "#6B7280",
+              border: "1.5px solid #E5E7EB", cursor: "pointer"
+            }}>
+              Full re-study
+            </button>
+          </div>
+        </div>
+      )}
+
+
       {/* ── RESULT PHASE ── */}
       {phase === "result" && results && (
         <div>
@@ -596,8 +732,9 @@ export default function TopicView({ topic, module: mod, course, onComplete, onSk
             ) : (
               <>
                 <button className="btn-primary" style={{ flex: 1 }}
-                  onClick={() => loadTeaching([])}>
-                  Re-study topic
+                  onClick={loadRepair}
+                  disabled={!results.failed_concepts?.length}>
+                  🔄 Re-study failed concepts
                 </button>
                 <button className="btn-success" style={{ flex: 1 }}
                   onClick={loadQuiz}>
