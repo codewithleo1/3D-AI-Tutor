@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from agents.quiz_agent import generate_quiz, evaluate_quiz
+from agents.quiz_agent import generate_quiz, evaluate_quiz, repair_concepts
 from agents.prerequisites_agent import generate_prerequisites
 from agents.teaching_agent import teach_topic, generate_practice
 
@@ -13,7 +13,6 @@ class TeachRequest(BaseModel):
     module_title: str
     course_title: str
     conversation_history: list = []
-
 
 class QuizGenerateRequest(BaseModel):
     topic_title: str
@@ -41,6 +40,10 @@ class PracticeRequest(BaseModel):
     module_title: str
     course_title: str
     level: str = "beginner"
+
+class RepairRequest(BaseModel):
+    topic_title: str
+    failed_concepts: list
 
 
 @router.post("/teach")
@@ -120,5 +123,16 @@ def practice(request: PracticeRequest):
             level=request.level,
         )
         return {"success": True, "practice": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/repair")
+def repair(request: RepairRequest):
+    try:
+        result = repair_concepts(
+            topic_title=request.topic_title,
+            failed_concepts=request.failed_concepts,
+        )
+        return {"success": True, "repair": result}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

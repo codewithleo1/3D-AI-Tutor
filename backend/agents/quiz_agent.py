@@ -1,5 +1,6 @@
 import os
 import json
+import re
 from groq import Groq
 from pathlib import Path
 from dotenv import load_dotenv
@@ -55,6 +56,9 @@ You are Miss Nova, evaluating quiz answers for a topic.
 Be generous — partial understanding counts.
 Reward correct reasoning even if wording is imprecise.
 
+CRITICAL: You must identify which specific concepts the student got wrong.
+These will be used to re-teach only the failed concepts — be precise and specific.
+
 Respond ONLY in this JSON format:
 {
   "results": [
@@ -77,11 +81,60 @@ Respond ONLY in this JSON format:
   "overall_passed": true,
   "score": 3,
   "summary": "1-2 sentence summary of how they did.",
-  "ready_to_advance": true
+  "ready_to_advance": true,
+  "failed_concepts": ["concept 1", "concept 2"]
 }
+
+Rules for failed_concepts:
+- List the specific concept names the student got wrong (e.g. "variable assignment", "data types")
+- If all passed, set failed_concepts to []
+- Be specific — not "variables" but "how to assign a value to a variable"
+- Maximum 3 failed concepts
 
 Set ready_to_advance to true if score is 2 or more out of 3.
 """
+
+REPAIR_PROMPT = """
+You are Miss Nova, re-teaching specific concepts a student got wrong on a quiz.
+
+The student already learned the full topic but struggled with specific parts.
+Your job is to re-explain ONLY the failed concepts — more clearly, with a different angle.
+
+Rules:
+- Focus only on the failed concepts listed
+- Use a different explanation than the first time — new analogy, simpler language
+- Keep it short — 2-3 paragraphs max
+- End with one concrete example
+- Be encouraging — frame it as "Let's look at this differently"
+
+Respond ONLY in this JSON format:
+{
+  "type": "repair",
+  "explanation": "Re-explanation targeting only the failed concepts",
+  "example_text": "A concrete example that clarifies the failed concept",
+  "code": "optional short code example, or empty string",
+  "code_language": "python or none",
+  "check_in": "One question to confirm they now understand"
+}
+"""
+
+
+def clean_json(raw: str) -> str:
+    raw = raw.strip()
+    if raw.startswith("```"):
+        parts = raw.split("```")
+        for part in parts:
+            part = part.strip()
+            if part.startswith("json"):
+                part = part[4:].strip()
+            if part.startswith("{"):
+                raw = part
+                break
+    start = raw.find("{")
+    end = raw.rfind("}") + 1
+    if start != -1 and end > start:
+        raw = raw[start:end]
+    return raw
 
 
 def generate_quiz(topic_title: str, topic_description: str) -> dict:
@@ -98,16 +151,12 @@ def generate_quiz(topic_title: str, topic_description: str) -> dict:
     )
 
     raw = response.choices[0].message.content.strip()
-    if raw.startswith("```"):
-        raw = raw.split("```")[1]
-        if raw.startswith("json"):
-            raw = raw[4:]
-
+    raw = clean_json(raw)
     return json.loads(raw)
 
 
 def evaluate_quiz(topic_title: str, questions: list, answers: list) -> dict:
-    """Evaluate student answers and return results."""
+    """Evaluate student answers and return results with failed_concepts."""
 
     payload = json.dumps({
         "topic": topic_title,
@@ -126,9 +175,44 @@ def evaluate_quiz(topic_title: str, questions: list, answers: list) -> dict:
     )
 
     raw = response.choices[0].message.content.strip()
-    if raw.startswith("```"):
-        raw = raw.split("```")[1]
-        if raw.startswith("json"):
-            raw = raw[4:]
+    raw = clean_json(raw)
 
-    return json.loads(raw)
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        raw = re.sub(r'[\n\r\t]', ' ', raw)
+        return json.loads(raw)
+
+
+def repair_concepts(
+    topic_title: str,
+    failed_concepts: list,
+) -> dict:
+    """Re-explain only the concepts the student failed on."""
+
+    response = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        messages=[
+            {"role": "system", "content": REPAIR_PROMPT},
+            {
+                "role": "user",
+                "content": f"""
+Topic: {topic_title}
+Failed concepts: {', '.join(failed_concepts)}
+
+Re-teach these specific concepts using a fresh angle.
+"""
+            },
+        ],
+        max_tokens=800,
+        temperature=0.7,
+    )
+
+    raw = response.choices[0].message.content.strip()
+    raw = clean_json(raw)
+
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        raw = re.sub(r'[\n\r\t]', ' ', raw)
+        return json.loads(raw)
