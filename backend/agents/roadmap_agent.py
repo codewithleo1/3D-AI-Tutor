@@ -165,7 +165,7 @@ Remember: Each topic must cover EXACTLY ONE concept. Never combine concepts.
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": user_message},
         ],
-        max_tokens=2000,
+        max_tokens=3000,
         temperature=0.7,
     )
 
