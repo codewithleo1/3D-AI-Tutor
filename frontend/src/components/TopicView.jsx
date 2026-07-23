@@ -5,11 +5,16 @@ import Editor from "@monaco-editor/react"
 const API = "http://127.0.0.1:8000/api"
 
 export default function TopicView({ topic, module: mod, course, onComplete, onSkip }) {
-  const [phase, setPhase] = useState("loading") // loading | teaching | quiz | result
+  const [phase, setPhase] = useState("loading") // loading | teaching | practice | quiz | result
   const [teaching, setTeaching] = useState(null)
   const [history, setHistory] = useState([])
   const [followUp, setFollowUp] = useState("")
   const [followUpLoading, setFollowUpLoading] = useState(false)
+  const [practice, setPractice] = useState(null)
+  const [practiceAnswer, setPracticeAnswer] = useState("")
+  const [hintsShown, setHintsShown] = useState(0)
+  const [showSolution, setShowSolution] = useState(false)
+  const [practiceLoading, setPracticeLoading] = useState(false)
   const [quiz, setQuiz] = useState(null)
   const [answers, setAnswers] = useState({})
   const [quizLoading, setQuizLoading] = useState(false)
@@ -23,6 +28,10 @@ export default function TopicView({ topic, module: mod, course, onComplete, onSk
   async function loadTeaching(conversationHistory) {
     setPhase("loading")
     setError("")
+    setPractice(null)
+    setPracticeAnswer("")
+    setHintsShown(0)
+    setShowSolution(false)
     try {
       const res = await axios.post(`${API}/teach`, {
         topic_title: topic.title,
@@ -32,9 +41,8 @@ export default function TopicView({ topic, module: mod, course, onComplete, onSk
         conversation_history: conversationHistory,
       })
       const data = res.data.response
-
       if (data.type === "ready_for_quiz") {
-        await loadQuiz()
+        await loadPractice()
       } else {
         setTeaching(data)
         setPhase("teaching")
@@ -48,7 +56,6 @@ export default function TopicView({ topic, module: mod, course, onComplete, onSk
   async function handleFollowUp() {
     if (!followUp.trim()) return
     setFollowUpLoading(true)
-
     const newHistory = [
       ...history,
       { role: "assistant", content: JSON.stringify(teaching) },
@@ -56,7 +63,6 @@ export default function TopicView({ topic, module: mod, course, onComplete, onSk
     ]
     setHistory(newHistory)
     setFollowUp("")
-
     try {
       const res = await axios.post(`${API}/teach`, {
         topic_title: topic.title,
@@ -67,7 +73,7 @@ export default function TopicView({ topic, module: mod, course, onComplete, onSk
       })
       const data = res.data.response
       if (data.type === "ready_for_quiz") {
-        await loadQuiz()
+        await loadPractice()
       } else {
         setTeaching(data)
       }
@@ -75,6 +81,30 @@ export default function TopicView({ topic, module: mod, course, onComplete, onSk
       setError("Something went wrong. Please try again.")
     } finally {
       setFollowUpLoading(false)
+    }
+  }
+
+  async function loadPractice() {
+    setPracticeLoading(true)
+    setPhase("loading")
+    try {
+      const res = await axios.post(`${API}/practice`, {
+        topic_title: topic.title,
+        topic_description: topic.description || "",
+        module_title: mod.title,
+        course_title: course.title,
+        level: "beginner",
+      })
+      setPractice(res.data.practice)
+      setPracticeAnswer("")
+      setHintsShown(0)
+      setShowSolution(false)
+      setPhase("practice")
+    } catch {
+      // If practice fails, skip straight to quiz
+      await loadQuiz()
+    } finally {
+      setPracticeLoading(false)
     }
   }
 
@@ -115,30 +145,78 @@ export default function TopicView({ topic, module: mod, course, onComplete, onSk
     }
   }
 
+  // Phase indicator dots
+  const phases = ["teaching", "practice", "quiz", "result"]
+  const phaseLabels = ["Learn", "Practice", "Quiz", "Result"]
+  const currentPhaseIdx = phases.indexOf(phase)
+
   return (
     <div style={{ maxWidth: "780px", margin: "0 auto", padding: "32px 24px" }}>
 
       {/* Topic header */}
-      <div style={{ marginBottom: "32px" }}>
-        <p style={{ fontSize: "12px", fontWeight: 700, color: "#7C3AED", letterSpacing: "1px", marginBottom: "6px" }}>
+      <div style={{ marginBottom: "24px" }}>
+        <p style={{ fontSize: "12px", fontWeight: 700, color: "#7C3AED",
+          letterSpacing: "1px", marginBottom: "6px" }}>
           {course.title} · {mod.title}
         </p>
-        <h1 style={{ fontSize: "32px", fontWeight: 800, color: "#111827", marginBottom: "8px",
-          fontFamily: "Plus Jakarta Sans, sans-serif" }}>
+        <h1 style={{ fontSize: "32px", fontWeight: 800, color: "#111827",
+          marginBottom: "8px", fontFamily: "Plus Jakarta Sans, sans-serif" }}>
           {topic.title}
         </h1>
         <p style={{ color: "#6B7280", fontSize: "15px" }}>{topic.description}</p>
       </div>
 
-      {/* Loading */}
-      {phase === "loading" && (
-        <div style={{ textAlign: "center", padding: "64px 0" }}>
-          <div style={{ fontSize: "48px", display: "inline-block" }} className="animate-spin">⚙️</div>
-          <p style={{ color: "#6B7280", marginTop: "16px", fontSize: "16px" }}>Miss Nova is preparing...</p>
+      {/* Phase indicator */}
+      {phase !== "loading" && (
+        <div style={{ display: "flex", alignItems: "center", gap: "0",
+          marginBottom: "32px" }}>
+          {phases.map((p, i) => (
+            <div key={p} style={{ display: "flex", alignItems: "center", flex: 1 }}>
+              <div style={{ display: "flex", flexDirection: "column",
+                alignItems: "center", flex: 1 }}>
+                <div style={{
+                  width: "28px", height: "28px", borderRadius: "50%",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: "12px", fontWeight: 700,
+                  background: i < currentPhaseIdx ? "#10B981"
+                    : i === currentPhaseIdx ? "#7C3AED" : "#E5E7EB",
+                  color: i <= currentPhaseIdx ? "white" : "#9CA3AF",
+                  transition: "all 0.3s"
+                }}>
+                  {i < currentPhaseIdx ? "✓" : i + 1}
+                </div>
+                <span style={{
+                  fontSize: "11px", marginTop: "4px", fontWeight: 600,
+                  color: i === currentPhaseIdx ? "#7C3AED"
+                    : i < currentPhaseIdx ? "#10B981" : "#9CA3AF"
+                }}>
+                  {phaseLabels[i]}
+                </span>
+              </div>
+              {i < phases.length - 1 && (
+                <div style={{
+                  height: "2px", flex: 1, marginBottom: "16px",
+                  background: i < currentPhaseIdx ? "#10B981" : "#E5E7EB",
+                  transition: "background 0.3s"
+                }} />
+              )}
+            </div>
+          ))}
         </div>
       )}
 
-      {/* Teaching phase */}
+      {/* Loading */}
+      {phase === "loading" && (
+        <div style={{ textAlign: "center", padding: "64px 0" }}>
+          <div style={{ fontSize: "48px", display: "inline-block" }}
+            className="animate-spin">⚙️</div>
+          <p style={{ color: "#6B7280", marginTop: "16px", fontSize: "16px" }}>
+            Miss Nova is preparing...
+          </p>
+        </div>
+      )}
+
+      {/* ── TEACHING PHASE ── */}
       {phase === "teaching" && teaching && (
         <div>
           {/* Explanation */}
@@ -146,16 +224,20 @@ export default function TopicView({ topic, module: mod, course, onComplete, onSk
             background: "#F9FAFB", border: "1.5px solid #E5E7EB",
             borderRadius: "20px", padding: "28px", marginBottom: "20px"
           }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "16px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px",
+              marginBottom: "16px" }}>
               <span style={{ fontSize: "28px" }}>👩‍🏫</span>
-              <span style={{ fontWeight: 700, color: "#111827", fontSize: "16px" }}>Miss Nova</span>
+              <span style={{ fontWeight: 700, color: "#111827", fontSize: "16px" }}>
+                Miss Nova
+              </span>
             </div>
-            <p style={{ color: "#374151", lineHeight: 1.8, fontSize: "15px", whiteSpace: "pre-wrap" }}>
+            <p style={{ color: "#374151", lineHeight: 1.8, fontSize: "15px",
+              whiteSpace: "pre-wrap" }}>
               {teaching.explanation}
             </p>
           </div>
 
-          {/* Example / Analogy */}
+          {/* Example */}
           {teaching.example_text && (
             <div style={{
               background: "#EDE9FE", border: "1.5px solid #C4B5FD",
@@ -173,14 +255,16 @@ export default function TopicView({ topic, module: mod, course, onComplete, onSk
 
           {/* Code example */}
           {teaching.code && teaching.code.trim() !== "" && (
-            <div style={{ marginBottom: "20px", borderRadius: "16px", overflow: "hidden",
-              border: "1.5px solid #E5E7EB" }}>
+            <div style={{ marginBottom: "20px", borderRadius: "16px",
+              overflow: "hidden", border: "1.5px solid #E5E7EB" }}>
               <div style={{ background: "#1E1E1E", padding: "10px 16px",
                 display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <span style={{ color: "#9CA3AF", fontSize: "12px", fontWeight: 600 }}>
                   {teaching.code_language?.toUpperCase() || "CODE"}
                 </span>
-                <span style={{ color: "#6B7280", fontSize: "11px" }}>Miss Nova's example</span>
+                <span style={{ color: "#6B7280", fontSize: "11px" }}>
+                  Miss Nova's example
+                </span>
               </div>
               <Editor
                 height="200px"
@@ -188,12 +272,9 @@ export default function TopicView({ topic, module: mod, course, onComplete, onSk
                 value={teaching.code.replace(/\\n/g, "\n")}
                 theme="vs-dark"
                 options={{
-                  readOnly: true,
-                  minimap: { enabled: false },
-                  fontSize: 14,
-                  lineNumbers: "on",
-                  scrollBeyondLastLine: false,
-                  wordWrap: "on",
+                  readOnly: true, minimap: { enabled: false },
+                  fontSize: 14, lineNumbers: "on",
+                  scrollBeyondLastLine: false, wordWrap: "on",
                 }}
               />
             </div>
@@ -204,12 +285,16 @@ export default function TopicView({ topic, module: mod, course, onComplete, onSk
             background: "#F0FDF4", border: "1.5px solid #BBF7D0",
             borderRadius: "16px", padding: "20px", marginBottom: "24px"
           }}>
-            <p style={{ color: "#166534", fontSize: "15px" }}>🤔 {teaching.check_in}</p>
+            <p style={{ color: "#166534", fontSize: "15px" }}>
+              🤔 {teaching.check_in}
+            </p>
           </div>
 
-          {error && <p style={{ color: "#EF4444", marginBottom: "16px" }}>{error}</p>}
+          {error && (
+            <p style={{ color: "#EF4444", marginBottom: "16px" }}>{error}</p>
+          )}
 
-          {/* Follow up input */}
+          {/* Follow up */}
           <div style={{ display: "flex", gap: "10px", marginBottom: "16px" }}>
             <input
               type="text"
@@ -223,23 +308,23 @@ export default function TopicView({ topic, module: mod, course, onComplete, onSk
                 color: "#111827", outline: "none", fontFamily: "Inter, sans-serif"
               }}
             />
-            <button
-              onClick={handleFollowUp}
+            <button onClick={handleFollowUp}
               disabled={!followUp.trim() || followUpLoading}
               style={{
                 padding: "12px 20px", borderRadius: "12px", border: "none",
                 background: "#7C3AED", color: "white", fontWeight: 600,
-                cursor: "pointer", fontSize: "14px", opacity: followUp.trim() ? 1 : 0.4
-              }}
-            >
+                cursor: "pointer", fontSize: "14px",
+                opacity: followUp.trim() ? 1 : 0.4
+              }}>
               {followUpLoading ? "..." : "Ask"}
             </button>
           </div>
 
-          {/* Action buttons */}
+          {/* Actions */}
           <div style={{ display: "flex", gap: "10px" }}>
-            <button className="btn-success" style={{ flex: 1 }} onClick={loadQuiz}>
-              I understand — Take the quiz →
+            <button className="btn-success" style={{ flex: 1 }}
+              onClick={loadPractice}>
+              I understand — Let's practice ✏️
             </button>
             <button onClick={onSkip} style={{
               padding: "14px 20px", borderRadius: "12px", fontWeight: 600,
@@ -252,7 +337,131 @@ export default function TopicView({ topic, module: mod, course, onComplete, onSk
         </div>
       )}
 
-      {/* Quiz phase */}
+      {/* ── PRACTICE PHASE ── */}
+      {phase === "practice" && practice && (
+        <div>
+          {/* Header */}
+          <div style={{
+            background: "#EDE9FE", border: "1.5px solid #C4B5FD",
+            borderRadius: "20px", padding: "24px", marginBottom: "24px"
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px",
+              marginBottom: "12px" }}>
+              <span style={{ fontSize: "24px" }}>✏️</span>
+              <span style={{ fontWeight: 700, color: "#4C1D95", fontSize: "16px" }}>
+                Your turn — Try it yourself
+              </span>
+            </div>
+            <p style={{ color: "#4C1D95", fontSize: "15px", lineHeight: 1.7 }}>
+              {practice.exercise}
+            </p>
+            {practice.expected_output && (
+              <p style={{ color: "#6D28D9", fontSize: "13px", marginTop: "10px",
+                fontStyle: "italic" }}>
+                Expected: {practice.expected_output}
+              </p>
+            )}
+          </div>
+
+          {/* Answer area */}
+          <div style={{ marginBottom: "16px" }}>
+            <label style={{ fontSize: "13px", fontWeight: 600, color: "#374151",
+              display: "block", marginBottom: "8px" }}>
+              Your answer:
+            </label>
+            <textarea
+              placeholder="Write your answer or code here..."
+              value={practiceAnswer}
+              onChange={e => setPracticeAnswer(e.target.value)}
+              rows={6}
+              style={{
+                width: "100%", padding: "14px 16px", borderRadius: "14px",
+                border: "1.5px solid #E5E7EB", fontSize: "14px", color: "#111827",
+                outline: "none", fontFamily: "JetBrains Mono, monospace",
+                resize: "vertical", lineHeight: 1.6,
+                background: "#F9FAFB"
+              }}
+            />
+          </div>
+
+          {/* Hints */}
+          <div style={{ marginBottom: "16px" }}>
+            {practice.hints && hintsShown > 0 && (
+              <div style={{ marginBottom: "12px" }}>
+                {practice.hints.slice(0, hintsShown).map((hint, i) => (
+                  <div key={i} style={{
+                    background: "#FFF7ED", border: "1.5px solid #FED7AA",
+                    borderRadius: "12px", padding: "12px 16px", marginBottom: "8px",
+                    display: "flex", gap: "10px", alignItems: "flex-start"
+                  }}>
+                    <span style={{ fontSize: "14px" }}>💡</span>
+                    <p style={{ color: "#92400E", fontSize: "14px", lineHeight: 1.6 }}>
+                      <strong>Hint {i + 1}:</strong> {hint}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div style={{ display: "flex", gap: "10px" }}>
+              {practice.hints && hintsShown < practice.hints.length && (
+                <button
+                  onClick={() => setHintsShown(h => h + 1)}
+                  style={{
+                    padding: "10px 18px", borderRadius: "10px", fontWeight: 600,
+                    fontSize: "13px", background: "#FFF7ED", color: "#92400E",
+                    border: "1.5px solid #FED7AA", cursor: "pointer"
+                  }}>
+                  💡 Show hint ({hintsShown}/{practice.hints.length})
+                </button>
+              )}
+              <button
+                onClick={() => setShowSolution(!showSolution)}
+                style={{
+                  padding: "10px 18px", borderRadius: "10px", fontWeight: 600,
+                  fontSize: "13px", background: "#F3F4F6", color: "#6B7280",
+                  border: "1.5px solid #E5E7EB", cursor: "pointer"
+                }}>
+                {showSolution ? "Hide solution" : "See solution"}
+              </button>
+            </div>
+          </div>
+
+          {/* Solution */}
+          {showSolution && (
+            <div style={{
+              background: "#F0FDF4", border: "1.5px solid #BBF7D0",
+              borderRadius: "16px", padding: "20px", marginBottom: "16px"
+            }}>
+              <p style={{ fontSize: "12px", fontWeight: 700, color: "#065F46",
+                letterSpacing: "1px", marginBottom: "10px" }}>
+                ✅ SOLUTION
+              </p>
+              <p style={{ color: "#166534", fontSize: "14px", lineHeight: 1.7,
+                fontFamily: "JetBrains Mono, monospace", whiteSpace: "pre-wrap" }}>
+                {practice.solution}
+              </p>
+            </div>
+          )}
+
+          {/* Actions */}
+          <div style={{ display: "flex", gap: "10px", marginTop: "8px" }}>
+            <button className="btn-success" style={{ flex: 1, fontSize: "15px" }}
+              onClick={loadQuiz}>
+              Done — Take the quiz 🧠
+            </button>
+            <button onClick={() => setPhase("teaching")} style={{
+              padding: "14px 20px", borderRadius: "12px", fontWeight: 600,
+              fontSize: "14px", background: "#F3F4F6", color: "#6B7280",
+              border: "1.5px solid #E5E7EB", cursor: "pointer"
+            }}>
+              ← Re-read
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── QUIZ PHASE ── */}
       {phase === "quiz" && quiz && (
         <div>
           <div style={{ textAlign: "center", marginBottom: "32px" }}>
@@ -271,11 +480,11 @@ export default function TopicView({ topic, module: mod, course, onComplete, onSk
               background: "#F9FAFB", border: "1.5px solid #E5E7EB",
               borderRadius: "16px", padding: "24px", marginBottom: "16px"
             }}>
-              <p style={{ fontWeight: 700, color: "#111827", marginBottom: "16px", fontSize: "15px" }}>
+              <p style={{ fontWeight: 700, color: "#111827",
+                marginBottom: "16px", fontSize: "15px" }}>
                 Q{i + 1}. {q.question}
               </p>
 
-              {/* Multiple choice */}
               {q.type === "multiple_choice" && (
                 <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                   {Object.entries(q.options).map(([key, val]) => (
@@ -294,10 +503,8 @@ export default function TopicView({ topic, module: mod, course, onComplete, onSk
                 </div>
               )}
 
-              {/* Fill in the blank */}
               {q.type === "fill_blank" && (
-                <input
-                  type="text"
+                <input type="text"
                   placeholder="Type your answer..."
                   value={answers[q.id] || ""}
                   onChange={e => setAnswers({ ...answers, [q.id]: e.target.value })}
@@ -309,7 +516,6 @@ export default function TopicView({ topic, module: mod, course, onComplete, onSk
                 />
               )}
 
-              {/* Open ended */}
               {q.type === "open_ended" && (
                 <textarea
                   placeholder="Write your answer here..."
@@ -327,25 +533,26 @@ export default function TopicView({ topic, module: mod, course, onComplete, onSk
             </div>
           ))}
 
-          {error && <p style={{ color: "#EF4444", marginBottom: "16px" }}>{error}</p>}
+          {error && (
+            <p style={{ color: "#EF4444", marginBottom: "16px" }}>{error}</p>
+          )}
 
-          <button
-            className="btn-primary"
+          <button className="btn-primary"
             style={{ width: "100%", fontSize: "16px" }}
             onClick={handleSubmitQuiz}
-            disabled={quizLoading || Object.keys(answers).length < quiz.questions.length}
-          >
+            disabled={quizLoading ||
+              Object.keys(answers).length < quiz.questions.length}>
             {quizLoading ? "Miss Nova is evaluating..." : "Submit answers →"}
           </button>
         </div>
       )}
 
-      {/* Result phase */}
+      {/* ── RESULT PHASE ── */}
       {phase === "result" && results && (
         <div>
-          {/* Score banner */}
           <div style={{
-            textAlign: "center", padding: "32px", borderRadius: "20px", marginBottom: "24px",
+            textAlign: "center", padding: "32px", borderRadius: "20px",
+            marginBottom: "24px",
             background: results.ready_to_advance ? "#D1FAE5" : "#FEF2F2",
             border: `1.5px solid ${results.ready_to_advance ? "#6EE7B7" : "#FECACA"}`
           }}>
@@ -362,10 +569,10 @@ export default function TopicView({ topic, module: mod, course, onComplete, onSk
             </p>
           </div>
 
-          {/* Per-question feedback */}
           {results.results.map((r, i) => (
             <div key={r.question_id} style={{
-              background: "#F9FAFB", border: `1.5px solid ${r.passed ? "#BBF7D0" : "#FECACA"}`,
+              background: "#F9FAFB",
+              border: `1.5px solid ${r.passed ? "#BBF7D0" : "#FECACA"}`,
               borderRadius: "14px", padding: "16px", marginBottom: "12px"
             }}>
               <div style={{ display: "flex", gap: "10px", alignItems: "flex-start" }}>
@@ -379,10 +586,10 @@ export default function TopicView({ topic, module: mod, course, onComplete, onSk
             </div>
           ))}
 
-          {/* Action buttons */}
           <div style={{ display: "flex", gap: "10px", marginTop: "24px" }}>
             {results.ready_to_advance ? (
-              <button className="btn-success" style={{ flex: 1, fontSize: "16px" }}
+              <button className="btn-success"
+                style={{ flex: 1, fontSize: "16px" }}
                 onClick={onComplete}>
                 Next topic →
               </button>
