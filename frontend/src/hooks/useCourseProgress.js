@@ -1,6 +1,8 @@
 import { useState, useCallback } from "react"
+import axios from "axios"
 
 const STORAGE_KEY = "miss-nova-progress"
+const API = "http://127.0.0.1:8000/api"
 
 export function useCourseProgress() {
   const [progress, setProgress] = useState(() => {
@@ -17,9 +19,42 @@ export function useCourseProgress() {
     setProgress(data)
   }
 
-  const initProgress = useCallback((roadmap) => {
+  async function syncToDb(data) {
+    if (!data?.courseId || !data?.sessionId) return
+    try {
+      await axios.post(`${API}/progress/save`, {
+        session_id: data.sessionId,
+        course_id: data.courseId,
+        completed_topics: data.completedTopics,
+        current_module: data.currentModule,
+        current_topic: data.currentTopic,
+      })
+    } catch {
+      // Silently fail — localStorage is the source of truth
+    }
+  }
+
+  const initProgress = useCallback(async (roadmap, goal, level) => {
+    let sessionId = null
+    let courseId = null
+
+    try {
+      const res = await axios.post(`${API}/progress/save-course`, {
+        goal: goal || "",
+        level: level || "",
+        roadmap,
+      })
+      sessionId = res.data.session_id
+      courseId = res.data.course_id
+    } catch {
+      sessionId = crypto.randomUUID()
+      courseId = crypto.randomUUID()
+    }
+
     const fresh = {
       roadmap,
+      sessionId,
+      courseId,
       completedTopics: [],
       currentModule: 0,
       currentTopic: 0,
@@ -28,24 +63,14 @@ export function useCourseProgress() {
     return fresh
   }, [])
 
-  const loadProgress = useCallback(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY)
-      if (!saved) return null
-      const parsed = JSON.parse(saved)
-      setProgress(parsed)
-      return parsed
-    } catch {
-      return null
-    }
-  }, [])
-
   const markTopicComplete = useCallback((mi, ti, roadmap) => {
     const id = `${mi}-${ti}`
-    const base = progress || { roadmap, completedTopics: [], currentModule: mi, currentTopic: ti }
+    const base = progress || {
+      roadmap, sessionId: null, courseId: null,
+      completedTopics: [], currentModule: mi, currentTopic: ti,
+    }
     if (base.completedTopics.includes(id)) return
 
-    // Advance location to next topic
     const mod = roadmap.modules[mi]
     let nextMi = mi
     let nextTi = ti + 1
@@ -62,6 +87,7 @@ export function useCourseProgress() {
       currentTopic: nextMi < roadmap.modules.length ? nextTi : ti,
     }
     save(updated)
+    syncToDb(updated)
   }, [progress])
 
   const setLocation = useCallback((mi, ti) => {
@@ -78,7 +104,6 @@ export function useCourseProgress() {
     if (progress.completedTopics.includes(id)) return "completed"
     if (id === currentId) return "current"
 
-    // Unlocked if previous topic is completed
     const prevId = ti === 0
       ? (mi === 0 ? null : (() => {
           const prevMod = progress.roadmap?.modules[mi - 1]
@@ -94,6 +119,7 @@ export function useCourseProgress() {
     if (!progress) return
     const updated = { ...progress, currentModule: mi, currentTopic: ti }
     save(updated)
+    syncToDb(updated)
   }, [progress])
 
   const clearProgress = useCallback(() => {
@@ -104,7 +130,6 @@ export function useCourseProgress() {
   return {
     progress,
     initProgress,
-    loadProgress,
     markTopicComplete,
     setLocation,
     getTopicState,

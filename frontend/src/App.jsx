@@ -75,14 +75,17 @@ export default function App() {
 
   // Restore from localStorage on app load
   useEffect(() => {
-    const saved = progress
-    if (saved?.roadmap) {
-      setRoadmap(saved.roadmap)
-      setCurrentModuleIdx(saved.currentModule)
-      setCurrentTopicIdx(saved.currentTopic)
-      setFinalized(true)
-      setTeaching(true)
+    async function restoreProgress() {
+      const saved = await loadProgress()
+      if (saved?.roadmap) {
+        setRoadmap(saved.roadmap)
+        setCurrentModuleIdx(saved.currentModule)
+        setCurrentTopicIdx(saved.currentTopic)
+        setFinalized(true)
+        setTeaching(true)
+      }
     }
+    restoreProgress()
   }, [])
 
   const goalDone = goal.trim().length > 0 && openSection > 1
@@ -559,8 +562,8 @@ export default function App() {
               {!finalized ? (
                 <>
                   <button className="btn-success" style={{ flex: 1, fontSize: "16px" }}
-                    onClick={() => {
-                      initProgress(roadmap)
+                    onClick={async () => {
+                      await initProgress(roadmap, goal, level)
                       setFinalized(true)
                     }}>
                     ✅ Finalize Roadmap

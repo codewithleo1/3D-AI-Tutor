@@ -7,7 +7,6 @@ from db.queries import save_course, save_progress, load_latest_progress, create_
 
 router = APIRouter()
 
-
 class TeachRequest(BaseModel):
     topic_title: str
     topic_description: str
@@ -121,8 +120,6 @@ def repair(request: RepairRequest):
 
 
 class SaveCourseRequest(BaseModel):
-    session_id: str
-    course_id: str
     goal: str
     level: str
     roadmap: dict
@@ -143,9 +140,9 @@ class LoadProgressRequest(BaseModel):
 @router.post("/progress/save-course")
 def save_course_route(request: SaveCourseRequest):
     try:
-        create_session(request.session_id, request.goal, request.level)
-        save_course(request.course_id, request.session_id, request.roadmap)
-        return {"success": True}
+        session_id = create_session(request.goal, request.level)
+        course_id = save_course(session_id, request.roadmap)
+        return {"success": True, "session_id": session_id, "course_id": course_id}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
