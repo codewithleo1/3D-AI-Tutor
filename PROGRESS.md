@@ -15,8 +15,8 @@
 ## Current Status
 
 **Phase:** 2 — LMS Core Build  
-**Last worked on:** July 22, 2026  
-**Next session goal:** Practice step in TopicView + Quiz repair logic
+**Last worked on:** July 24, 2026
+**Next session goal:** Cross-device restore (load progress from DB on app load) + Practice evaluation (Bug 2)
 
 ---
 
@@ -173,6 +173,16 @@ CSS classes defined: `section-card`, `btn-primary`, `btn-success`, `option-btn`,
   - [x] Fail → Re-study or Retry quiz buttons
   - [x] Skip topic button
 
+### DB Wiring ✅ COMPLETE
+- [x] Neon schema fixed — courses/progress tables recreated with correct columns
+- [x] Unique constraint on progress(session_id, course_id)
+- [x] POST /api/progress/save-course — creates session + course, returns both IDs
+- [x] POST /api/progress/save — upserts progress on topic complete
+- [x] POST /api/progress/load — loads latest progress by session_id
+- [x] frontend/src/utils/session.js — generates persistent session UUID
+- [x] useCourseProgress.js — initProgress calls DB, markTopicComplete syncs to DB
+- [x] App.jsx — initProgress is async, passes goal + level
+
 ### Known Issues (fix next session)
 - [ ] Duplicate `TopicView.jsx` at `frontend/src/TopicView.jsx` — delete it
   - Fix: `git rm frontend/src/TopicView.jsx` then commit
@@ -231,8 +241,10 @@ CSS classes defined: `section-card`, `btn-primary`, `btn-success`, `option-btn`,
 │       │   ├── Prerequisites.jsx          ✅ setup guide screen
 │       │   ├── Sidebar.jsx                ✅ module/topic nav
 │       │   └── TopicView.jsx              ✅ teach + quiz UI
-│       └── hooks/
-│           └── useCourseProgress.js       ✅ localStorage progress
+│       ├── hooks/
+│       │   └── useCourseProgress.js       ✅ localStorage + Neon DB sync
+│       └── utils/
+│           └── session.js                 ✅ session UUID generator
 │
 ├── backend/
 │   ├── main.py                            ✅ FastAPI app + CORS
@@ -266,7 +278,9 @@ CSS classes defined: `section-card`, `btn-primary`, `btn-success`, `option-btn`,
 | 7 | Hook destructuring placed before state declarations in App.jsx | Move all `useState` declarations above hook calls |
 | 8 | Extra closing `</div>` in teaching mode JSX | Teaching mode needs exactly 2 closing divs: flex row + min-h-screen |
 | 9 | `TopicView.jsx` committed to wrong location (`src/` instead of `src/components/`) | `git rm frontend/src/TopicView.jsx` |
-
+| 10 | create_session called with wrong args (session_id passed as first arg) | DB generates session_id — call create_session(goal, level) only |
+| 11 | await in onClick without async keyword | onClick={async () => { await ... }} |
+| 12 | Vite serving stale bundle after file edits | Remove-Item -Recurse -Force .vite then Ctrl+Shift+R |
 ---
 
 ## Coding Rules (Follow Every Session)
@@ -293,3 +307,4 @@ CSS classes defined: `section-card`, `btn-primary`, `btn-success`, `option-btn`,
 | July 21, 2026 | Phase 1 complete. Roadmap agent working. Onboarding UI built. Roadmap display with edit/remove. | — |
 | July 22, 2026 | Phase 2 backend complete. Teaching agent + quiz agent + prerequisites agent. Basic TopicView built. Monaco Editor. | eb723cd |
 | July 22, 2026 | Phase 2 frontend: localStorage persistence, Sidebar with lock states + jump nav, Prerequisites screen, 3-view routing in App.jsx | 9420f8a |
+| July 24, 2026 | Neon DB schema migration, backend route fixes, frontend DB wiring, progress syncs end-to-end | b335840, 7e75bed |
