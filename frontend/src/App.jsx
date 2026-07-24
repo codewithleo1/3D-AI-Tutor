@@ -75,17 +75,13 @@ export default function App() {
 
   // Restore from localStorage on app load
   useEffect(() => {
-    async function restoreProgress() {
-      const saved = await loadProgress()
-      if (saved?.roadmap) {
-        setRoadmap(saved.roadmap)
-        setCurrentModuleIdx(saved.currentModule)
-        setCurrentTopicIdx(saved.currentTopic)
-        setFinalized(true)
-        setTeaching(true)
-      }
+    if (progress?.roadmap) {
+      setRoadmap(progress.roadmap)
+      setCurrentModuleIdx(progress.currentModule)
+      setCurrentTopicIdx(progress.currentTopic)
+      setFinalized(true)
+      setTeaching(true)
     }
-    restoreProgress()
   }, [])
 
   const goalDone = goal.trim().length > 0 && openSection > 1
