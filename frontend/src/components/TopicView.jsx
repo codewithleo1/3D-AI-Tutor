@@ -89,30 +89,60 @@ export default function TopicView({ topic, module: mod, course, level, onComplet
     }
   }
 
-  async function loadPractice() {
-    setPracticeLoading(true)
-    setPracticeEval(null)
-    setPhase("loading")
+  async function handleExplainDifferently() {
+    const message = "Can you explain this differently? Use a different analogy or approach."
+    setFollowUpLoading(true)
+    const newHistory = [
+      ...history,
+      { role: "assistant", content: JSON.stringify(teaching) },
+      { role: "user", content: message },
+    ]
+    setHistory(newHistory)
     try {
-      const res = await axios.post(`${API}/practice`, {
+      const res = await axios.post(`${API}/teach`, {
         topic_title: topic.title,
         topic_description: topic.description || "",
         module_title: mod.title,
         course_title: course.title,
-        level: level || "beginner",
+        conversation_history: newHistory,
       })
-      setPractice(res.data.practice)
-      setPracticeAnswer("")
-      setHintsShown(0)
-      setShowSolution(false)
-      setPhase("practice")
+      const data = res.data.response
+      if (data.type === "ready_for_quiz") {
+        await loadPractice()
+      } else {
+        setTeaching(data)
+      }
     } catch {
-      // If practice fails, skip straight to quiz
-      await loadQuiz()
+      setError("Something went wrong. Please try again.")
     } finally {
-      setPracticeLoading(false)
+      setFollowUpLoading(false)
     }
   }
+
+    async function loadPractice() {
+      setPracticeLoading(true)
+      setPracticeEval(null)
+      setPhase("loading")
+      try {
+        const res = await axios.post(`${API}/practice`, {
+          topic_title: topic.title,
+          topic_description: topic.description || "",
+          module_title: mod.title,
+          course_title: course.title,
+          level: level || "beginner",
+        })
+        setPractice(res.data.practice)
+        setPracticeAnswer("")
+        setHintsShown(0)
+        setShowSolution(false)
+        setPhase("practice")
+      } catch {
+        // If practice fails, skip straight to quiz
+        await loadQuiz()
+      } finally {
+        setPracticeLoading(false)
+      }
+    }
 
   async function submitPractice() {
     if (!practiceAnswer.trim()) return
