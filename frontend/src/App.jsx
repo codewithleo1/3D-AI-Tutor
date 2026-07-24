@@ -66,6 +66,7 @@ export default function App() {
   const {
     progress,
     initProgress,
+    loadFromDb,
     markTopicComplete,
     setLocation,
     getTopicState,
@@ -75,13 +76,27 @@ export default function App() {
 
   // Restore from localStorage on app load
   useEffect(() => {
-    if (progress?.roadmap) {
-      setRoadmap(progress.roadmap)
-      setCurrentModuleIdx(progress.currentModule)
-      setCurrentTopicIdx(progress.currentTopic)
-      setFinalized(true)
-      setTeaching(true)
+    async function restoreProgress() {
+      // 1. Try localStorage first (instant)
+      if (progress?.roadmap) {
+        setRoadmap(progress.roadmap)
+        setCurrentModuleIdx(progress.currentModule)
+        setCurrentTopicIdx(progress.currentTopic)
+        setFinalized(true)
+        setTeaching(true)
+        return
+      }
+      // 2. Fall back to DB (same session ID, cleared localStorage)
+      const saved = await loadFromDb()
+      if (saved?.roadmap) {
+        setRoadmap(saved.roadmap)
+        setCurrentModuleIdx(saved.currentModule)
+        setCurrentTopicIdx(saved.currentTopic)
+        setFinalized(true)
+        setTeaching(true)
+      }
     }
+    restoreProgress()
   }, [])
 
   const goalDone = goal.trim().length > 0 && openSection > 1

@@ -34,6 +34,30 @@ export function useCourseProgress() {
     }
   }
 
+  const loadFromDb = useCallback(async () => {
+    const sessionId = localStorage.getItem("miss-nova-session-id")
+    if (!sessionId) return null
+    try {
+      const res = await axios.post(`${API}/progress/load`, {
+        session_id: sessionId,
+      })
+      if (!res.data.progress) return null
+      const p = res.data.progress
+      const restored = {
+        roadmap: p.roadmap,
+        sessionId,
+        courseId: p.course_id,
+        completedTopics: p.completed_topics || [],
+        currentModule: p.current_module,
+        currentTopic: p.current_topic,
+      }
+      save(restored)
+      return restored
+    } catch {
+      return null
+    }
+  }, [])
+
   const initProgress = useCallback(async (roadmap, goal, level) => {
     let sessionId = null
     let courseId = null
@@ -130,6 +154,7 @@ export function useCourseProgress() {
   return {
     progress,
     initProgress,
+    loadFromDb,
     markTopicComplete,
     setLocation,
     getTopicState,
