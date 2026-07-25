@@ -153,17 +153,16 @@ Topic description: {topic_description}
             "content": f"Please teach me about: {topic_title}"
         })
 
-is_followup = len(conversation_history) > 0
+    is_followup = len(conversation_history) > 0
 
-response = client.chat.completions.create(
-    model="llama-3.3-70b-versatile",
-    messages=messages,
-    max_tokens=400 if is_followup else 1200,
-    temperature=0.7,
-)
+    response = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        messages=messages,
+        max_tokens=400 if is_followup else 1200,
+        temperature=0.7,
+    )
 
     raw = response.choices[0].message.content.strip()
-    raw = clean_json(raw)
 
     try:
         return json.loads(raw)
