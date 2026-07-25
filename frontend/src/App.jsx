@@ -5,7 +5,7 @@ import { useCourseProgress } from "./hooks/useCourseProgress"
 import Sidebar from "./components/Sidebar"
 import Prerequisites from "./components/Prerequisites"
 
-const API = "http://127.0.0.1:8000/api"
+const API = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000/api"
 
 const LEVELS = [
   { label: "Complete beginner", desc: "Starting from zero" },

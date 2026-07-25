@@ -2,7 +2,7 @@ import { useState, useEffect } from "react"
 import axios from "axios"
 import Editor from "@monaco-editor/react"
 
-const API = "http://127.0.0.1:8000/api"
+const API = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000/api"
 
 export default function TopicView({ topic, module: mod, course, level, onComplete, onSkip }) {
   const [phase, setPhase] = useState("loading") // loading | teaching | practice | quiz | result
