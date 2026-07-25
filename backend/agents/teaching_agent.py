@@ -158,7 +158,7 @@ Topic description: {topic_description}
     response = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
         messages=messages,
-        max_tokens=400 if is_followup else 1200,
+        max_tokens=600 if is_followup else 1200,
         temperature=0.7,
     )
 
