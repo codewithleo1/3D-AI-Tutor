@@ -307,10 +307,11 @@ export default function TopicView({ topic, module: mod, course, level, onComplet
                 Miss Nova
               </span>
             </div>
-            <p style={{ color: "#374151", lineHeight: 1.8, fontSize: "15px",
-              whiteSpace: "pre-wrap" }}>
-              {teaching.explanation}
-            </p>
+            <div style={{ color: "#374151", lineHeight: 1.8, fontSize: "15px" }}>
+              {(teaching.explanation || "").split("\n\n").map((para, i) => (
+                <p key={i} style={{ marginBottom: "14px" }}>{para}</p>
+              ))}
+            </div>
           </div>
 
           {/* Example */}
@@ -369,6 +370,20 @@ export default function TopicView({ topic, module: mod, course, level, onComplet
           {error && (
             <p style={{ color: "#EF4444", marginBottom: "16px" }}>{error}</p>
           )}
+
+          {/* Explain differently */}
+          <button
+            onClick={handleExplainDifferently}
+            disabled={followUpLoading}
+            style={{
+              display: "flex", alignItems: "center", gap: "8px",
+              padding: "10px 18px", borderRadius: "10px", fontWeight: 600,
+              fontSize: "13px", background: "#EDE9FE", color: "#6D28D9",
+              border: "1.5px solid #C4B5FD", cursor: "pointer",
+              marginBottom: "12px", opacity: followUpLoading ? 0.5 : 1
+            }}>
+            🔄 Explain differently
+          </button>
 
           {/* Follow up */}
           <div style={{ display: "flex", gap: "10px", marginBottom: "16px" }}>
@@ -719,10 +734,11 @@ export default function TopicView({ topic, module: mod, course, level, onComplet
                 Miss Nova
               </span>
             </div>
-            <p style={{ color: "#374151", lineHeight: 1.8, fontSize: "15px",
-              whiteSpace: "pre-wrap" }}>
-              {repair.explanation}
-            </p>
+            <div style={{ color: "#374151", lineHeight: 1.8, fontSize: "15px" }}>
+              {(repair.explanation || "").split("\n\n").map((para, i) => (
+                <p key={i} style={{ marginBottom: "14px" }}>{para}</p>
+              ))}
+            </div>
           </div>
 
           {/* Example */}
