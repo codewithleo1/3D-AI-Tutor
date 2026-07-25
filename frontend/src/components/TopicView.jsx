@@ -24,6 +24,8 @@ export default function TopicView({ topic, module: mod, course, level, onComplet
   const [repairLoading, setRepairLoading] = useState(false)
   const [practiceEval, setPracticeEval] = useState(null)
   const [practiceEvalLoading, setPracticeEvalLoading] = useState(false)
+  const [messages, setMessages] = useState([])
+  const [exchangeCount, setExchangeCount] = useState(0)
 
   useEffect(() => {
     setPracticeEval(null)
@@ -50,6 +52,8 @@ export default function TopicView({ topic, module: mod, course, level, onComplet
         await loadPractice()
       } else {
         setTeaching(data)
+        setMessages([{ role: "nova", data }])
+        setExchangeCount(0)
         setPhase("teaching")
       }
     } catch {
@@ -81,6 +85,12 @@ export default function TopicView({ topic, module: mod, course, level, onComplet
         await loadPractice()
       } else {
         setTeaching(data)
+        setMessages(prev => [
+          ...prev,
+          { role: "user", text: followUp },
+          { role: "nova", data }
+        ])
+        setExchangeCount(prev => prev + 1)
       }
     } catch {
       setError("Something went wrong. Please try again.")
@@ -111,7 +121,13 @@ export default function TopicView({ topic, module: mod, course, level, onComplet
         await loadPractice()
       } else {
         setTeaching(data)
-      }
+        setMessages(prev => [
+          ...prev,
+          { role: "user", text: "Can you explain this differently?" },
+          { role: "nova", data }
+        ])
+  setExchangeCount(prev => prev + 1)
+}
     } catch {
       setError("Something went wrong. Please try again.")
     } finally {
@@ -295,77 +311,99 @@ export default function TopicView({ topic, module: mod, course, level, onComplet
       {/* ── TEACHING PHASE ── */}
       {phase === "teaching" && teaching && (
         <div>
-          {/* Explanation */}
-          <div style={{
-            background: "#F9FAFB", border: "1.5px solid #E5E7EB",
-            borderRadius: "20px", padding: "28px", marginBottom: "20px"
-          }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px",
-              marginBottom: "16px" }}>
-              <span style={{ fontSize: "28px" }}>👩‍🏫</span>
-              <span style={{ fontWeight: 700, color: "#111827", fontSize: "16px" }}>
-                Miss Nova
-              </span>
-            </div>
-            <div style={{ color: "#374151", lineHeight: 1.8, fontSize: "15px" }}>
-              {(teaching.explanation || "").split("\n\n").map((para, i) => (
-                <p key={i} style={{ marginBottom: "14px" }}>{para}</p>
-              ))}
-            </div>
-          </div>
+          {/* Chat thread */}
+          {messages.map((msg, idx) => (
+            <div key={idx}>
+              {msg.role === "nova" && (
+                <div>
+                  {/* Explanation */}
+                  <div style={{
+                    background: "#F9FAFB", border: "1.5px solid #E5E7EB",
+                    borderRadius: "20px", padding: "28px", marginBottom: "16px"
+                  }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px",
+                      marginBottom: "16px" }}>
+                      <span style={{ fontSize: "28px" }}>👩‍🏫</span>
+                      <span style={{ fontWeight: 700, color: "#111827", fontSize: "16px" }}>
+                        Miss Nova
+                      </span>
+                    </div>
+                    <div style={{ color: "#374151", lineHeight: 1.8, fontSize: "15px" }}>
+                      {(msg.data.explanation || msg.data.answer || "").split("\n\n").map((para, i) => (
+                        <p key={i} style={{ marginBottom: "14px" }}>{para}</p>
+                      ))}
+                    </div>
+                  </div>
 
-          {/* Example */}
-          {teaching.example_text && (
-            <div style={{
-              background: "#EDE9FE", border: "1.5px solid #C4B5FD",
-              borderRadius: "20px", padding: "24px", marginBottom: "20px"
-            }}>
-              <p style={{ fontSize: "12px", fontWeight: 700, color: "#7C3AED",
-                letterSpacing: "1px", marginBottom: "10px" }}>
-                💡 EXAMPLE
-              </p>
-              <p style={{ color: "#4C1D95", lineHeight: 1.7, fontSize: "15px" }}>
-                {teaching.example_text}
-              </p>
-            </div>
-          )}
+                  {/* Example — only for explanation type */}
+                  {msg.data.type === "explanation" && msg.data.example_text && (
+                    <div style={{
+                      background: "#EDE9FE", border: "1.5px solid #C4B5FD",
+                      borderRadius: "20px", padding: "24px", marginBottom: "16px"
+                    }}>
+                      <p style={{ fontSize: "12px", fontWeight: 700, color: "#7C3AED",
+                        letterSpacing: "1px", marginBottom: "10px" }}>
+                        💡 EXAMPLE
+                      </p>
+                      <p style={{ color: "#4C1D95", lineHeight: 1.7, fontSize: "15px" }}>
+                        {msg.data.example_text}
+                      </p>
+                    </div>
+                  )}
 
-          {/* Code example */}
-          {teaching.code && teaching.code.trim() !== "" && (
-            <div style={{ marginBottom: "20px", borderRadius: "16px",
-              overflow: "hidden", border: "1.5px solid #E5E7EB" }}>
-              <div style={{ background: "#1E1E1E", padding: "10px 16px",
-                display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <span style={{ color: "#9CA3AF", fontSize: "12px", fontWeight: 600 }}>
-                  {teaching.code_language?.toUpperCase() || "CODE"}
-                </span>
-                <span style={{ color: "#6B7280", fontSize: "11px" }}>
-                  Miss Nova's example
-                </span>
-              </div>
-              <Editor
-                height="200px"
-                language={teaching.code_language || "python"}
-                value={teaching.code.replace(/\\n/g, "\n")}
-                theme="vs-dark"
-                options={{
-                  readOnly: true, minimap: { enabled: false },
-                  fontSize: 14, lineNumbers: "on",
-                  scrollBeyondLastLine: false, wordWrap: "on",
-                }}
-              />
-            </div>
-          )}
+                  {/* Code */}
+                  {msg.data.type === "explanation" && msg.data.code && msg.data.code.trim() !== "" && (
+                    <div style={{ marginBottom: "16px", borderRadius: "16px",
+                      overflow: "hidden", border: "1.5px solid #E5E7EB" }}>
+                      <div style={{ background: "#1E1E1E", padding: "10px 16px",
+                        display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                        <span style={{ color: "#9CA3AF", fontSize: "12px", fontWeight: 600 }}>
+                          {msg.data.code_language?.toUpperCase() || "CODE"}
+                        </span>
+                        <span style={{ color: "#6B7280", fontSize: "11px" }}>Miss Nova's example</span>
+                      </div>
+                      <Editor
+                        height="200px"
+                        language={msg.data.code_language || "python"}
+                        value={msg.data.code.replace(/\\n/g, "\n")}
+                        theme="vs-dark"
+                        options={{
+                          readOnly: true, minimap: { enabled: false },
+                          fontSize: 14, lineNumbers: "on",
+                          scrollBeyondLastLine: false, wordWrap: "on",
+                        }}
+                      />
+                    </div>
+                  )}
 
-          {/* Check in */}
-          <div style={{
-            background: "#F0FDF4", border: "1.5px solid #BBF7D0",
-            borderRadius: "16px", padding: "20px", marginBottom: "24px"
-          }}>
-            <p style={{ color: "#166534", fontSize: "15px" }}>
-              🤔 {teaching.check_in}
-            </p>
-          </div>
+                  {/* Check in */}
+                  {msg.data.check_in && (
+                    <div style={{
+                      background: "#F0FDF4", border: "1.5px solid #BBF7D0",
+                      borderRadius: "16px", padding: "20px", marginBottom: "16px"
+                    }}>
+                      <p style={{ color: "#166534", fontSize: "15px" }}>
+                        🤔 {msg.data.check_in}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {msg.role === "user" && (
+                <div style={{
+                  display: "flex", justifyContent: "flex-end", marginBottom: "16px"
+                }}>
+                  <div style={{
+                    background: "#7C3AED", color: "white", borderRadius: "16px 16px 4px 16px",
+                    padding: "12px 18px", maxWidth: "70%", fontSize: "14px", lineHeight: 1.6
+                  }}>
+                    {msg.text}
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
 
           {error && (
             <p style={{ color: "#EF4444", marginBottom: "16px" }}>{error}</p>
@@ -411,11 +449,25 @@ export default function TopicView({ topic, module: mod, course, level, onComplet
             </button>
           </div>
 
-          {/* Actions */}
+          {/* Understanding gate */}
+          {exchangeCount === 0 && (
+            <div style={{
+              background: "#FFF7ED", border: "1.5px solid #FED7AA",
+              borderRadius: "14px", padding: "16px", marginBottom: "12px",
+              fontSize: "14px", color: "#92400E"
+            }}>
+              💡 Take a moment to read through the explanation before moving on.
+              Ask Miss Nova any questions you have!
+            </div>
+          )}
+
           <div style={{ display: "flex", gap: "10px" }}>
             <button className="btn-success" style={{ flex: 1 }}
-              onClick={loadPractice}>
-              I understand — Let's practice ✏️
+              onClick={loadPractice}
+              disabled={exchangeCount === 0}>
+              {exchangeCount === 0
+                ? "Ask at least one question first ✋"
+                : "I understand — Let's practice ✏️"}
             </button>
             <button onClick={onSkip} style={{
               padding: "14px 20px", borderRadius: "12px", fontWeight: 600,

@@ -53,11 +53,17 @@ All code must be directly about the topic being taught. Never show unrelated con
   "check_in": "One specific question testing understanding of THIS topic"
 }
 
-For follow-up responses:
+For follow-up responses — STRICT RULES:
+- Maximum 3 sentences only. No exceptions.
+- No analogies, no examples section, no long explanations
+- Just answer the specific question asked, directly and clearly
+- If code helps, include max 3-4 lines only
 {
   "type": "follow_up",
-  "answer": "Direct answer with topic-specific code example",
-  "check_in": "Follow-up question"
+  "answer": "3 sentences maximum. Direct answer only.",
+  "code": "optional 3-4 line snippet or empty string",
+  "code_language": "python or empty string",
+  "check_in": "One short question"
 }
 
 When student is ready for quiz:
@@ -147,10 +153,12 @@ Topic description: {topic_description}
             "content": f"Please teach me about: {topic_title}"
         })
 
+    is_followup = len(conversation_history) > 0
+
     response = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
         messages=messages,
-        max_tokens=1000,
+        max_tokens=250 if is_followup else 1200,
         temperature=0.7,
     )
 
