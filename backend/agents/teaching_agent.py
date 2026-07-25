@@ -167,8 +167,17 @@ Topic description: {topic_description}
     try:
         return json.loads(raw)
     except json.JSONDecodeError:
-        raw = re.sub(r'[\n\r\t]', ' ', raw)
-        return json.loads(raw)
+        try:
+            raw = re.sub(r'[\n\r\t]', ' ', raw)
+            return json.loads(raw)
+        except json.JSONDecodeError:
+            return {
+                "type": "follow_up",
+                "answer": "I had trouble formatting my response. Could you ask your question again?",
+                "code": "",
+                "code_language": "",
+                "check_in": "What would you like to know?"
+            }
 
 
 def generate_practice(
@@ -209,8 +218,16 @@ Generate a practice exercise for this topic.
     try:
         return json.loads(raw)
     except json.JSONDecodeError:
-        raw = re.sub(r'[\n\r\t]', ' ', raw)
-        return json.loads(raw)
+        try:
+            raw = re.sub(r'[\n\r\t]', ' ', raw)
+            return json.loads(raw)
+        except json.JSONDecodeError:
+            return {
+                "exercise": "Write a basic example using what you just learned.",
+                "expected_output": "A working solution",
+                "hints": ["Review the explanation above", "Try the simplest case first"],
+                "solution": "See the code example in the lesson above."
+            }
 
 PRACTICE_EVALUATE_PROMPT = """
 You are Miss Nova, evaluating a student's practice exercise attempt.
