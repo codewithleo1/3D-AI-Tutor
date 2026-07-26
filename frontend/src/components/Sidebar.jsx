@@ -6,6 +6,7 @@ export default function Sidebar({
   currentTopicIdx,
   getTopicState,
   onTopicSelect,
+  mood,
 }) {
   const [expandedModules, setExpandedModules] = useState({})
 
@@ -147,6 +148,7 @@ export default function Sidebar({
           )
         })}
       </div>
+
 
       {/* Bottom stats */}
       <div style={{

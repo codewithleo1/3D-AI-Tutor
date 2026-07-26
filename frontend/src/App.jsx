@@ -4,6 +4,7 @@ import TopicView from "./components/TopicView"
 import { useCourseProgress } from "./hooks/useCourseProgress"
 import Sidebar from "./components/Sidebar"
 import Prerequisites from "./components/Prerequisites"
+import Avatar from "./components/Avatar"
 
 const API = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000/api"
 
@@ -57,11 +58,13 @@ export default function App() {
   const [finalized, setFinalized] = useState(false)
   const [openSection, setOpenSection] = useState(1)
   const [showPrereqs, setShowPrereqs] = useState(false)
+  
 
 // Teaching mode state
   const [teaching, setTeaching] = useState(false)
   const [currentModuleIdx, setCurrentModuleIdx] = useState(0)
   const [currentTopicIdx, setCurrentTopicIdx] = useState(0)
+  const [avatarMood, setAvatarMood] = useState("idle")
 
   const {
     progress,
@@ -254,7 +257,7 @@ export default function App() {
           }} />
         </div>
 
-        {/* Sidebar + Content */}
+        {/* Sidebar + Content + Nova */}
         <div style={{ display: "flex" }}>
           <Sidebar
             roadmap={roadmap}
@@ -276,8 +279,23 @@ export default function App() {
                 level={level}
                 onComplete={handleTopicComplete}
                 onSkip={handleTopicSkip}
+                onMoodChange={setAvatarMood}
               />
             )}
+          </div>
+          {/* Nova Panel */}
+          <div style={{
+            width: "320px",
+            minWidth: "320px",
+            borderLeft: "1.5px solid #F3F4F6",
+            height: "calc(100vh - 64px)",
+            position: "sticky",
+            top: "64px",
+            display: "flex",
+            flexDirection: "column",
+            background: "linear-gradient(180deg, #FAF5FF 0%, #F0FDF4 100%)",
+          }}>
+            <Avatar mood={avatarMood} />
           </div>
         </div>
 

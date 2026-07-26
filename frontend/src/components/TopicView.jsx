@@ -4,8 +4,7 @@ import Editor from "@monaco-editor/react"
 
 const API = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000/api"
 
-export default function TopicView({ topic, module: mod, course, level, onComplete, onSkip }) {
-  const [phase, setPhase] = useState("loading") // loading | teaching | practice | quiz | result
+export default function TopicView({ topic, module: mod, course, level, onComplete, onSkip, onMoodChange }) {
   const [teaching, setTeaching] = useState(null)
   const [history, setHistory] = useState([])
   const [followUp, setFollowUp] = useState("")
@@ -26,11 +25,24 @@ export default function TopicView({ topic, module: mod, course, level, onComplet
   const [practiceEvalLoading, setPracticeEvalLoading] = useState(false)
   const [messages, setMessages] = useState([])
   const [exchangeCount, setExchangeCount] = useState(0)
+  const [phase, setPhase] = useState("loading")
 
   useEffect(() => {
     setPracticeEval(null)
     loadTeaching([])
   }, [topic.id])
+
+  useEffect(() => {
+    if (!onMoodChange) return
+    if (phase === "loading") onMoodChange("thinking")
+    else if (phase === "teaching") onMoodChange("explaining")
+    else if (phase === "practice") onMoodChange("idle")
+    else if (phase === "quiz") onMoodChange("quiz")
+    else if (phase === "repair") onMoodChange("encouraging")
+    else if (phase === "result") {
+      onMoodChange(results?.ready_to_advance ? "happy" : "concerned")
+    }
+  }, [phase, results])
 
   async function loadTeaching(conversationHistory) {
     setPhase("loading")
