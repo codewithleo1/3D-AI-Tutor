@@ -12,11 +12,19 @@
 
 ---
 
+
+## Deployment (Live)
+- Frontend: https://3-d-ai-tutor.vercel.app
+- Backend: https://miss-nova-backend.onrender.com
+- Keep-alive: cron-job.org pings /health every 10 min
+- DB: Neon PostgreSQL (production branch)
+
+---
+
 ## Current Status
 
-**Phase:** 2 — LMS Core Build  
-**Last worked on:** July 24, 2026
-**Next session goal:** Cross-device restore (load progress from DB on app load) + Practice evaluation (Bug 2)
+Last worked on: July 26, 2026
+Next session goal: Test avatar on live Vercel deployment, wire mood changes dynamically
 
 ---
 
@@ -183,33 +191,34 @@ CSS classes defined: `section-card`, `btn-primary`, `btn-success`, `option-btn`,
 - [x] useCourseProgress.js — initProgress calls DB, markTopicComplete syncs to DB
 - [x] App.jsx — initProgress is async, passes goal + level
 
-### Known Issues (fix next session)
-- [ ] Duplicate `TopicView.jsx` at `frontend/src/TopicView.jsx` — delete it
-  - Fix: `git rm frontend/src/TopicView.jsx` then commit
 
 ### Next to Build — Active Learning (Highest Impact)
-- [ ] Practice step in `TopicView.jsx` — learner writes answer before quiz
-  - [ ] `POST /api/teach { subtopic_type: "practice" }` 
-  - [ ] Exercise prompt + text area
-  - [ ] "Show hint" button (reveals hints one by one)
-  - [ ] "See solution" button
-- [ ] Quiz repair logic
-  - [ ] On fail: extract `failed_concepts` from quiz evaluation response
-  - [ ] `POST /api/teach { subtopic_type: "repair", failed_concepts: [...] }`
-  - [ ] Re-explain only failed concepts, then mini retry quiz
-- [ ] "Explain differently" button in teaching phase
-  - [ ] Sends new history turn requesting a different angle/analogy
-- [ ] `subtopic_type` field in `TeachRequest` (backend)
-  - [ ] Update `teaching_agent.py` prompts per type
+- [x] Practice step in `TopicView.jsx` — learner writes answer before quiz
+  - [x] `POST /api/teach { subtopic_type: "practice" }` 
+  - [x] Exercise prompt + text area
+  - [x] "Show hint" button (reveals hints one by one)
+  - [x] "See solution" button
+- [x] Quiz repair logic
+  - [x] On fail: extract `failed_concepts` from quiz evaluation response
+  - [x] `POST /api/teach { subtopic_type: "repair", failed_concepts: [...] }`
+  - [x] Re-explain only failed concepts, then mini retry quiz
+- [x] "Explain differently" button in teaching phase
+  - [x] Sends new history turn requesting a different angle/analogy
+- [x] `subtopic_type` field in `TeachRequest` (backend)
+  - [x] Update `teaching_agent.py` prompts per type
 
 ---
 
-## Phase 3 — 3D Avatar 🔒 NOT STARTED
+## Phase 3 — 3D Avatar 🔄 IN PROGRESS
 
-- [ ] `Avatar.jsx` — Ready Player Me + Three.js
-- [ ] Mood states: `idle | explaining | thinking | coding | quiz | happy | concerned | encouraging`
-- [ ] Avatar mood mapped to teaching phases
-- [ ] Lip sync with Web Speech API
+- [x] Installed three, @react-three/fiber, @react-three/drei
+- [x] Downloaded animated female teacher GLB from Sketchfab (nova.glb)
+- [x] Built Avatar.jsx — loads GLB, plays animations based on mood prop
+- [x] Added right panel (320px) in App.jsx for avatar
+- [x] Avatar reacts to phase changes via onMoodChange callback from TopicView
+- [x] Mood mapping: teaching→explaining, quiz→quiz, pass→happy, fail→concerned
+- [ ] Push nova.glb to work on Vercel (currently only works locally)
+- [ ] Test all mood transitions on live site
 
 ---
 
@@ -238,9 +247,10 @@ CSS classes defined: `section-card`, `btn-primary`, `btn-success`, `option-btn`,
 │       ├── index.css                      ✅ brand system
 │       ├── main.jsx                       ✅ React root
 │       ├── components/
-│       │   ├── Prerequisites.jsx          ✅ setup guide screen
-│       │   ├── Sidebar.jsx                ✅ module/topic nav
-│       │   └── TopicView.jsx              ✅ teach + quiz UI
+│       │   ├── Avatar.jsx             ✅ 3D Miss Nova with mood reactions
+│       │   ├── Prerequisites.jsx      ✅ setup guide screen
+│       │   ├── Sidebar.jsx            ✅ module/topic nav
+│       │   └── TopicView.jsx          ✅ teach + quiz UI
 │       ├── hooks/
 │       │   └── useCourseProgress.js       ✅ localStorage + Neon DB sync
 │       └── utils/
@@ -281,6 +291,9 @@ CSS classes defined: `section-card`, `btn-primary`, `btn-success`, `option-btn`,
 | 10 | create_session called with wrong args (session_id passed as first arg) | DB generates session_id — call create_session(goal, level) only |
 | 11 | await in onClick without async keyword | onClick={async () => { await ... }} |
 | 12 | Vite serving stale bundle after file edits | Remove-Item -Recurse -Force .vite then Ctrl+Shift+R |
+| 13 | phase useState deleted accidentally causing ReferenceError | Always check useState declarations when adding useEffect that references state |
+| 14 | Math.PI rotation shows model's back | Use rotation={[0, 0, 0]} for front-facing, small values like 0.1 for slight angle |
+| 15 | GLB file in public/ not pushed to git due to size | Add nova.glb explicitly with git add frontend/public/nova.glb |
 ---
 
 ## Coding Rules (Follow Every Session)
@@ -308,3 +321,4 @@ CSS classes defined: `section-card`, `btn-primary`, `btn-success`, `option-btn`,
 | July 22, 2026 | Phase 2 backend complete. Teaching agent + quiz agent + prerequisites agent. Basic TopicView built. Monaco Editor. | eb723cd |
 | July 22, 2026 | Phase 2 frontend: localStorage persistence, Sidebar with lock states + jump nav, Prerequisites screen, 3-view routing in App.jsx | 9420f8a |
 | July 24, 2026 | Neon DB schema migration, backend route fixes, frontend DB wiring, progress syncs end-to-end | b335840, 7e75bed |
+| July 26, 2026 | Neon DB wiring complete, cross-device restore, conversation UI, understanding gate, deployed to Vercel + Render, 3D avatar built with Three.js + React Three Fiber | multiple commits |
