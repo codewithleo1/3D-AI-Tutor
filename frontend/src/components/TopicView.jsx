@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react"
 import axios from "axios"
 import Editor from "@monaco-editor/react"
+import { useSpeech } from "../hooks/useSpeech"
 
 const API = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000/api"
 
@@ -26,11 +27,18 @@ export default function TopicView({ topic, module: mod, course, level, onComplet
   const [messages, setMessages] = useState([])
   const [exchangeCount, setExchangeCount] = useState(0)
   const [phase, setPhase] = useState("loading")
+  const { speak, stop, isSpeaking } = useSpeech()
 
   useEffect(() => {
     setPracticeEval(null)
     loadTeaching([])
   }, [topic.id])
+
+  useEffect(() => {
+    if (!teaching?.explanation) return
+    const timer = setTimeout(() => speak(teaching.explanation), 100)
+    return () => clearTimeout(timer)
+  }, [teaching])
 
   useEffect(() => {
     if (!onMoodChange) return
@@ -339,6 +347,17 @@ export default function TopicView({ topic, module: mod, course, level, onComplet
                       <span style={{ fontWeight: 700, color: "#111827", fontSize: "16px" }}>
                         Miss Nova
                       </span>
+                      <button
+                        onClick={() => isSpeaking ? stop() : speak(msg.data.explanation || msg.data.answer || "")}
+                        title={isSpeaking ? "Stop speaking" : "Replay"}
+                        style={{
+                          marginLeft: "auto", background: isSpeaking ? "#EDE9FE" : "#F3F4F6",
+                          border: `1.5px solid ${isSpeaking ? "#C4B5FD" : "#E5E7EB"}`,
+                          borderRadius: "8px", padding: "4px 10px", cursor: "pointer",
+                          fontSize: "14px", color: isSpeaking ? "#7C3AED" : "#6B7280"
+                        }}>
+                        {isSpeaking ? "🔊 Speaking..." : "🔈 Replay"}
+                      </button>
                     </div>
                     <div style={{ color: "#374151", lineHeight: 1.8, fontSize: "15px" }}>
                       {(msg.data.explanation || msg.data.answer || "").split("\n\n").map((para, i) => (
