@@ -35,8 +35,9 @@ export default function TopicView({ topic, module: mod, course, level, onComplet
   }, [topic.id])
 
   useEffect(() => {
-    if (!teaching?.explanation) return
-    const timer = setTimeout(() => speak(teaching.explanation), 100)
+    const text = teaching?.explanation || teaching?.answer || ""
+    if (!text) return
+    const timer = setTimeout(() => speak(text), 100)
     return () => clearTimeout(timer)
   }, [teaching])
 
@@ -87,7 +88,7 @@ export default function TopicView({ topic, module: mod, course, level, onComplet
     setFollowUpLoading(true)
     const newHistory = [
       ...history,
-      { role: "assistant", content: JSON.stringify(teaching) },
+      { role: "assistant", content: teaching.explanation || teaching.answer || "" },
       { role: "user", content: followUp },
     ]
     setHistory(newHistory)
@@ -124,7 +125,7 @@ export default function TopicView({ topic, module: mod, course, level, onComplet
     setFollowUpLoading(true)
     const newHistory = [
       ...history,
-      { role: "assistant", content: JSON.stringify(teaching) },
+      { role: "assistant", content: teaching.explanation || teaching.answer || "" },
       { role: "user", content: message },
     ]
     setHistory(newHistory)

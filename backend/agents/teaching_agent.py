@@ -163,6 +163,7 @@ Topic description: {topic_description}
     )
 
     raw = response.choices[0].message.content.strip()
+    raw = clean_json(raw)
 
     try:
         return json.loads(raw)
