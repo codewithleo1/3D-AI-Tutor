@@ -18,10 +18,26 @@ function NovaModel({ mood, isSpeaking }) {
   const { scene, animations } = useGLTF("/nova.glb")
   const { actions, names } = useAnimations(animations, group)
   const headBoneRef = useRef(null)
+  const bodyBonesRef = useRef([])
+
   useEffect(() => {
-    scene.traverse(obj => {
-      if (obj.isBone && obj.name === "Head_5") headBoneRef.current = obj
+    const bodyBoneNames = [
+      "LeftUpLeg_57", "LeftLeg_58", "LeftFoot_59", "LeftToeBase_60", "LeftToe_End_61",
+      "RightUpLeg_62", "RightLeg_63", "RightFoot_64", "RightToeBase_65", "RightToe_End_66",
+    ]
+    const collected = []
+      scene.traverse(obj => {
+        if (obj.isBone && obj.name.toLowerCase().includes("head") && !obj.name.toLowerCase().includes("top")) headBoneRef.current = obj
+        if (obj.isBone && bodyBoneNames.includes(obj.name)) {
+        // Store bone + its rest rotation
+        collected.push({
+          bone: obj,
+          restRotation: obj.rotation.clone(),
+          restPosition: obj.position.clone(),
+        })
+      }
     })
+    bodyBonesRef.current = collected
   }, [scene])
 
 
@@ -51,42 +67,21 @@ function NovaModel({ mood, isSpeaking }) {
 
     if (action) {
       action.reset().fadeIn(0.3).play()
-
-      // Mute body bones — only head and hands animate
-      const allowedBones = [
-        "Head_5", "HeadTop_End_6", "LeftEye_7", "RightEye_8",
-        "LeftHand_12", "LeftHandThumb1_13", "LeftHandThumb2_14", "LeftHandThumb3_15", "LeftHandThumb4_16",
-        "LeftHandIndex1_17", "LeftHandIndex2_18", "LeftHandIndex3_19", "LeftHandIndex4_20",
-        "LeftHandMiddle1_21", "LeftHandMiddle2_22", "LeftHandMiddle3_23", "LeftHandMiddle4_24",
-        "LeftHandRing1_25", "LeftHandRing2_26", "LeftHandRing3_27", "LeftHandRing4_28",
-        "LeftHandPinky1_29", "LeftHandPinky2_30", "LeftHandPinky3_31", "LeftHandPinky4_32",
-        "RightHand_36", "RightHandThumb1_37", "RightHandThumb2_38", "RightHandThumb3_39", "RightHandThumb4_40",
-        "RightHandIndex1_41", "RightHandIndex2_42", "RightHandIndex3_43", "RightHandIndex4_44",
-        "RightHandMiddle1_45", "RightHandMiddle2_46", "RightHandMiddle3_47", "RightHandMiddle4_48",
-        "RightHandRing1_49", "RightHandRing2_50", "RightHandRing3_51", "RightHandRing4_52",
-        "RightHandPinky1_53", "RightHandPinky2_54", "RightHandPinky3_55", "RightHandPinky4_56",
-      ]
-
-      const clip = action.getClip()
-      clip.tracks.forEach(track => {
-        // track name format: "BoneName.property"
-        const boneName = track.name.split(".")[0]
-        if (!allowedBones.includes(boneName)) {
-          // Find the mixer property and mute it
-          const binding = action.getMixer()._bindings.find(b => b._targetPath && b._node?.name === boneName)
-          if (binding) binding.weight = 0
-        }
-      })
     }
   }, [mood, actions, names])
 
   useFrame(({ clock }) => {
+    // Lock body bones to rest position every frame
+    bodyBonesRef.current.forEach(({ bone, restRotation, restPosition }) => {
+      bone.rotation.copy(restRotation)
+      bone.position.copy(restPosition)
+    })
+
+    // Animate head while speaking
     if (!headBoneRef.current) return
     if (isSpeaking) {
-      // Subtle jaw-like nod: sine wave on X rotation
       headBoneRef.current.rotation.x = Math.sin(clock.getElapsedTime() * 8) * 0.04
     } else {
-      // Smoothly return to neutral
       headBoneRef.current.rotation.x *= 0.85
     }
   })
