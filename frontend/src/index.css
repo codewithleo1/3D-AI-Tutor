@@ -139,3 +139,25 @@ code, pre {
   border-color: #7C3AED;
   background: #FAF5FF;
 }
+
+/* ── Sidebar responsive ── */
+.sidebar-close-btn { display: none; }
+
+@media (max-width: 768px) {
+  .sidebar-desktop { display: none; }
+  .sidebar-close-btn { display: flex; }
+}
+
+@media (min-width: 769px) {
+  .sidebar-mobile { display: none; }
+}
+
+@media (max-width: 768px) {
+  .nova-panel { display: none !important; }
+  .hamburger-btn { display: flex !important; }
+  .topic-counter { display: none; }
+}
+
+@media (min-width: 769px) {
+  .hamburger-btn { display: none !important; }
+}

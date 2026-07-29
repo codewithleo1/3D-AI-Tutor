@@ -59,6 +59,7 @@ export default function App() {
   const [finalized, setFinalized] = useState(false)
   const [openSection, setOpenSection] = useState(1)
   const [showPrereqs, setShowPrereqs] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   
 
 // Teaching mode state
@@ -233,10 +234,25 @@ export default function App() {
 
         {/* Nav */}
         <nav style={{ borderBottom: "1px solid #F3F4F6", height: "60px" }}
-          className="flex items-center justify-between px-8 sticky top-0 bg-white z-10">
-          <span className="text-2xl font-extrabold gradient-text">Miss Nova</span>
+          className="flex items-center justify-between px-4 md:px-8 sticky top-0 bg-white z-10">
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            {/* Hamburger — mobile only */}
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="hamburger-btn"
+              style={{
+                background: "#F3F4F6", border: "1.5px solid #E5E7EB",
+                borderRadius: "8px", padding: "6px 10px",
+                cursor: "pointer", fontSize: "18px", lineHeight: 1,
+              }}
+            >
+              ☰
+            </button>
+            <span className="text-2xl font-extrabold gradient-text">Miss Nova</span>
+          </div>
           <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-            <span style={{ fontSize: "13px", color: "#6B7280" }}>
+            <span style={{ fontSize: "13px", color: "#6B7280" }}
+              className="topic-counter">
               Topic {completedTopics + 1} of {totalTopics}
             </span>
             <button onClick={() => setTeaching(false)} style={{
@@ -266,6 +282,8 @@ export default function App() {
             currentModuleIdx={currentModuleIdx}
             currentTopicIdx={currentTopicIdx}
             getTopicState={getTopicState}
+            isOpen={sidebarOpen}
+            onClose={() => setSidebarOpen(false)}
             onTopicSelect={(mi, ti) => {
               setCurrentModuleIdx(mi)
               setCurrentTopicIdx(ti)
@@ -288,8 +306,9 @@ export default function App() {
               />
             )}
           </div>
+
           {/* Nova Panel */}
-          <div style={{
+          <div className="nova-panel" style={{
             width: "320px",
             minWidth: "320px",
             borderLeft: "1.5px solid #F3F4F6",
