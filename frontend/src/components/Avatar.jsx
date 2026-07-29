@@ -13,15 +13,18 @@ const MOOD_TO_ANIMATION = {
   encouraging: "Talking",
 }
 
-function NovaModel({ mood }) {
+function NovaModel({ mood, isSpeaking }) {
   const group = useRef()
   const { scene, animations } = useGLTF("/nova.glb")
   const { actions, names } = useAnimations(animations, group)
-
+  const headBoneRef = useRef(null)
   useEffect(() => {
-    // Log available animations on first load
-    console.log("Available animations:", names)
-  }, [names])
+    scene.traverse(obj => {
+      if (obj.isBone && obj.name === "Head_5") headBoneRef.current = obj
+    })
+  }, [scene])
+
+
 
   useEffect(() => {
     if (!actions || names.length === 0) return
@@ -48,8 +51,45 @@ function NovaModel({ mood }) {
 
     if (action) {
       action.reset().fadeIn(0.3).play()
+
+      // Mute body bones — only head and hands animate
+      const allowedBones = [
+        "Head_5", "HeadTop_End_6", "LeftEye_7", "RightEye_8",
+        "LeftHand_12", "LeftHandThumb1_13", "LeftHandThumb2_14", "LeftHandThumb3_15", "LeftHandThumb4_16",
+        "LeftHandIndex1_17", "LeftHandIndex2_18", "LeftHandIndex3_19", "LeftHandIndex4_20",
+        "LeftHandMiddle1_21", "LeftHandMiddle2_22", "LeftHandMiddle3_23", "LeftHandMiddle4_24",
+        "LeftHandRing1_25", "LeftHandRing2_26", "LeftHandRing3_27", "LeftHandRing4_28",
+        "LeftHandPinky1_29", "LeftHandPinky2_30", "LeftHandPinky3_31", "LeftHandPinky4_32",
+        "RightHand_36", "RightHandThumb1_37", "RightHandThumb2_38", "RightHandThumb3_39", "RightHandThumb4_40",
+        "RightHandIndex1_41", "RightHandIndex2_42", "RightHandIndex3_43", "RightHandIndex4_44",
+        "RightHandMiddle1_45", "RightHandMiddle2_46", "RightHandMiddle3_47", "RightHandMiddle4_48",
+        "RightHandRing1_49", "RightHandRing2_50", "RightHandRing3_51", "RightHandRing4_52",
+        "RightHandPinky1_53", "RightHandPinky2_54", "RightHandPinky3_55", "RightHandPinky4_56",
+      ]
+
+      const clip = action.getClip()
+      clip.tracks.forEach(track => {
+        // track name format: "BoneName.property"
+        const boneName = track.name.split(".")[0]
+        if (!allowedBones.includes(boneName)) {
+          // Find the mixer property and mute it
+          const binding = action.getMixer()._bindings.find(b => b._targetPath && b._node?.name === boneName)
+          if (binding) binding.weight = 0
+        }
+      })
     }
   }, [mood, actions, names])
+
+  useFrame(({ clock }) => {
+    if (!headBoneRef.current) return
+    if (isSpeaking) {
+      // Subtle jaw-like nod: sine wave on X rotation
+      headBoneRef.current.rotation.x = Math.sin(clock.getElapsedTime() * 8) * 0.04
+    } else {
+      // Smoothly return to neutral
+      headBoneRef.current.rotation.x *= 0.85
+    }
+  })
 
   return (
     <group ref={group}>
@@ -63,7 +103,7 @@ function NovaModel({ mood }) {
   )
 }
 
-export default function Avatar({ mood = "idle" }) {
+export default function Avatar({ mood = "idle", isSpeaking = false }) {
     return (
         <div style={{
         width: "100%",
@@ -79,7 +119,7 @@ export default function Avatar({ mood = "idle" }) {
         >
         <ambientLight intensity={1} />
         <directionalLight position={[0, 4, 4]} intensity={1.2} />
-        <NovaModel mood={mood} />
+        <NovaModel mood={mood} isSpeaking={isSpeaking} />
       </Canvas>
       <div style={{
         position: "absolute",

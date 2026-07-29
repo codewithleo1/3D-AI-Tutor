@@ -5,6 +5,7 @@ import { useCourseProgress } from "./hooks/useCourseProgress"
 import Sidebar from "./components/Sidebar"
 import Prerequisites from "./components/Prerequisites"
 import Avatar from "./components/Avatar"
+import { useSpeech } from "./hooks/useSpeech"
 
 const API = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000/api"
 
@@ -65,6 +66,7 @@ export default function App() {
   const [currentModuleIdx, setCurrentModuleIdx] = useState(0)
   const [currentTopicIdx, setCurrentTopicIdx] = useState(0)
   const [avatarMood, setAvatarMood] = useState("idle")
+  const { speak, stop, isSpeaking } = useSpeech()
 
   const {
     progress,
@@ -280,6 +282,9 @@ export default function App() {
                 onComplete={handleTopicComplete}
                 onSkip={handleTopicSkip}
                 onMoodChange={setAvatarMood}
+                speak={speak}
+                stop={stop}
+                isSpeaking={isSpeaking}
               />
             )}
           </div>
@@ -295,7 +300,7 @@ export default function App() {
             flexDirection: "column",
             background: "linear-gradient(180deg, #FAF5FF 0%, #F0FDF4 100%)",
           }}>
-            <Avatar mood={avatarMood} />
+            <Avatar mood={avatarMood} isSpeaking={isSpeaking} />
           </div>
         </div>
 

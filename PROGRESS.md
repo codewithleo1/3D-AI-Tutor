@@ -217,6 +217,8 @@ CSS classes defined: `section-card`, `btn-primary`, `btn-success`, `option-btn`,
 - [x] Added right panel (320px) in App.jsx for avatar
 - [x] Avatar reacts to phase changes via onMoodChange callback from TopicView
 - [x] Mood mapping: teaching→explaining, quiz→quiz, pass→happy, fail→concerned
+- [x] Avatar head nod lipsync while isSpeaking (useFrame sine wave on Head_5)
+- [x] Body bones locked to rest position (useFrame override)
 - [ ] Push nova.glb to work on Vercel (currently only works locally)
 - [ ] Test all mood transitions on live site
 
@@ -252,7 +254,8 @@ CSS classes defined: `section-card`, `btn-primary`, `btn-success`, `option-btn`,
 │       │   ├── Sidebar.jsx            ✅ module/topic nav
 │       │   └── TopicView.jsx          ✅ teach + quiz UI
 │       ├── hooks/
-│       │   └── useCourseProgress.js       ✅ localStorage + Neon DB sync
+│       │   ├── useCourseProgress.js       ✅ localStorage + Neon DB sync
+│       │   └── useSpeech.js               ✅ Web Speech API TTS hook
 │       └── utils/
 │           └── session.js                 ✅ session UUID generator
 │
@@ -294,6 +297,11 @@ CSS classes defined: `section-card`, `btn-primary`, `btn-success`, `option-btn`,
 | 13 | phase useState deleted accidentally causing ReferenceError | Always check useState declarations when adding useEffect that references state |
 | 14 | Math.PI rotation shows model's back | Use rotation={[0, 0, 0]} for front-facing, small values like 0.1 for slight angle |
 | 15 | GLB file in public/ not pushed to git due to size | Add nova.glb explicitly with git add frontend/public/nova.glb |
+| 16 | isSpeaking not defined in App.jsx | Move useSpeech() to App.jsx, pass speak/stop/isSpeaking as props to TopicView |
+| 17 | Avatar body/legs flying off screen | Lock body bones to rest position every frame in useFrame — don't rely on track muting |
+| 18 | LLM returns malformed JSON on follow-ups | Call clean_json() in teach_topic(), not just generate_practice() |
+| 19 | Follow-up history sends full JSON blob | Send teaching.explanation || teaching.answer as assistant history content |
+| 20 | TTS speaks wrong voice after refactor | Add female-specific voice names to preferred list in useSpeech.js |
 ---
 
 ## Coding Rules (Follow Every Session)
@@ -322,3 +330,4 @@ CSS classes defined: `section-card`, `btn-primary`, `btn-success`, `option-btn`,
 | July 22, 2026 | Phase 2 frontend: localStorage persistence, Sidebar with lock states + jump nav, Prerequisites screen, 3-view routing in App.jsx | 9420f8a |
 | July 24, 2026 | Neon DB schema migration, backend route fixes, frontend DB wiring, progress syncs end-to-end | b335840, 7e75bed |
 | July 26, 2026 | Neon DB wiring complete, cross-device restore, conversation UI, understanding gate, deployed to Vercel + Render, 3D avatar built with Three.js + React Three Fiber | multiple commits |
+| July 29, 2026 | TTS with Web Speech API, lipsync head nod, body bone locking, follow-up fix, teaching_agent clean_json fix | multiple commits |

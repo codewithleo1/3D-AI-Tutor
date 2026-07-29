@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react"
 import axios from "axios"
 import Editor from "@monaco-editor/react"
-import { useSpeech } from "../hooks/useSpeech"
+
 
 const API = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000/api"
 
-export default function TopicView({ topic, module: mod, course, level, onComplete, onSkip, onMoodChange }) {
+export default function TopicView({ topic, module: mod, course, level, onComplete, onSkip, onMoodChange, speak, stop, isSpeaking }) {
   const [teaching, setTeaching] = useState(null)
   const [history, setHistory] = useState([])
   const [followUp, setFollowUp] = useState("")
@@ -27,7 +27,7 @@ export default function TopicView({ topic, module: mod, course, level, onComplet
   const [messages, setMessages] = useState([])
   const [exchangeCount, setExchangeCount] = useState(0)
   const [phase, setPhase] = useState("loading")
-  const { speak, stop, isSpeaking } = useSpeech()
+  // speak, stop, isSpeaking come from App.jsx via props
 
   useEffect(() => {
     setPracticeEval(null)
