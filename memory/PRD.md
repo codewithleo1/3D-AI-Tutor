@@ -32,12 +32,15 @@ and shared latest local files (Avatar.jsx, App.jsx, Sidebar.jsx, main.jsx). Avat
 - Env wiring for this preview: `frontend/.env` VITE_API_URL, vite.config server host/port/allowedHosts,
   `start` script in package.json.
 
-## Verification status
-- GLB validated (uncompressed, valid, serves 200; full 10.7 MB downloads in ~0.24s via ingress).
-- Frontend compiles clean; main onboarding UI renders correctly.
-- 3D RENDER NOT visually confirmed in this environment: the headless screenshot tool cannot capture
-  the WebGL canvas frame (even an asset-free box won't paint). User must confirm in a real browser via
-  `<preview-url>/?debugAvatar`.
+## Verification status (VERIFIED WORKING in preview)
+- Backend live here: GROQ_API_KEY + Neon DATABASE_URL set in `backend/.env`; `backend/server.py` shim exposes `app` for supervisor; deps installed in /root/.venv; Neon schema applied (sessions/courses/progress).
+- Curl-verified through public ingress: /health ok, POST /api/roadmap (Groq), /api/progress/save-course (DB), /api/prerequisites, /api/teach — all 200/success.
+- Testing agent (real browser w/ WebGL) confirmed: `?debugAvatar` renders the 3D RPM avatar; full onboarding→roadmap→finalize→prerequisites→teaching flow works and the right-hand Nova panel shows the rendered avatar. No console/React errors.
+- Cosmetic fix applied: "Loading Miss Nova…" hint now hides after the model loads (was bleeding through the model).
+
+## To ship to user's own repo / deploys
+- Copy `frontend/src/components/Avatar.jsx` (the fix) and keep `frontend/public/rpm_test.glb` committed (Vercel).
+- On Render backend, set env: DATABASE_URL, GROQ_API_KEY, ALLOWED_ORIGINS (include the Vercel origin).
 
 ## Backlog / next
 - P1: Run backend here (needs GROQ_API_KEY + Neon DATABASE_URL) to test full onboarding→teaching→avatar flow.

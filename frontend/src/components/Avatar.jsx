@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, Suspense } from "react"
+import React, { useRef, useEffect, useState, useCallback, Suspense } from "react"
 import { Canvas, useFrame } from "@react-three/fiber"
 import { useGLTF, useAnimations } from "@react-three/drei"
 import * as THREE from "three"
@@ -37,7 +37,7 @@ const MANAGED_MORPHS = [
   ...new Set(Object.values(MOOD_TO_EXPRESSION).flatMap(o => Object.keys(o))),
 ]
 
-function NovaModel({ moodRef, isSpeakingRef, currentVisemeRef }) {
+function NovaModel({ moodRef, isSpeakingRef, currentVisemeRef, onLoaded }) {
   const group = useRef()
   const { scene, animations } = useGLTF(MODEL_URL)
   const { actions, names } = useAnimations(animations, group)
@@ -59,6 +59,7 @@ function NovaModel({ moodRef, isSpeakingRef, currentVisemeRef }) {
       }
     })
     morphMeshesRef.current = meshes
+    onLoaded?.()
   }, [scene])
 
   // If the model DOES have clips, play the mood-matched one (RPM export has none).
@@ -135,7 +136,7 @@ function NovaModel({ moodRef, isSpeakingRef, currentVisemeRef }) {
   )
 }
 
-const AvatarCanvas = React.memo(function AvatarCanvas({ moodRef, isSpeakingRef, currentVisemeRef }) {
+const AvatarCanvas = React.memo(function AvatarCanvas({ moodRef, isSpeakingRef, currentVisemeRef, onLoaded }) {
   return (
     <Canvas
       camera={{ position: [0, 0, 3], fov: 60 }}
@@ -151,6 +152,7 @@ const AvatarCanvas = React.memo(function AvatarCanvas({ moodRef, isSpeakingRef, 
           moodRef={moodRef}
           isSpeakingRef={isSpeakingRef}
           currentVisemeRef={currentVisemeRef}
+          onLoaded={onLoaded}
         />
       </Suspense>
     </Canvas>
@@ -165,26 +167,32 @@ export default function Avatar({ mood = "idle", isSpeaking = false, currentVisem
   isSpeakingRef.current = isSpeaking
   currentVisemeRef.current = currentViseme
 
+  const [loaded, setLoaded] = useState(false)
+  const handleLoaded = useCallback(() => setLoaded(true), [])
+
   return (
     <div style={{
       width: "100%", height: "100%", minHeight: "400px",
       background: "linear-gradient(180deg, #EDE9FE 0%, #F0FDF4 100%)",
       position: "relative", overflow: "hidden",
     }}>
-      {/* Loading hint shown until the WebGL canvas paints the model */}
-      <div style={{
-        position: "absolute", inset: 0, display: "flex",
-        alignItems: "center", justifyContent: "center",
-        fontSize: "13px", color: "#7C3AED", fontWeight: 600, opacity: 0.6,
-        pointerEvents: "none",
-      }}>
-        Loading Miss Nova…
-      </div>
+      {/* Loading hint — only until the WebGL canvas has the model */}
+      {!loaded && (
+        <div style={{
+          position: "absolute", inset: 0, display: "flex",
+          alignItems: "center", justifyContent: "center",
+          fontSize: "13px", color: "#7C3AED", fontWeight: 600, opacity: 0.6,
+          pointerEvents: "none",
+        }}>
+          Loading Miss Nova…
+        </div>
+      )}
       <div style={{ position: "absolute", inset: 0 }}>
         <AvatarCanvas
           moodRef={moodRef}
           isSpeakingRef={isSpeakingRef}
           currentVisemeRef={currentVisemeRef}
+          onLoaded={handleLoaded}
         />
       </div>
       <div style={{
