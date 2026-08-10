@@ -1,13 +1,19 @@
-import React, { useRef, useEffect, useState, useCallback, Suspense } from "react"
+import React, { useRef, useEffect, useState, useMemo, useCallback, Suspense } from "react"
 import { Canvas, useFrame } from "@react-three/fiber"
 import { useGLTF, useAnimations } from "@react-three/drei"
 
 const MODEL_URL = "/rpm_test.glb"
-const IDLE_URL = "/idle_feminine.glb" // Ready Player Me standing idle (Mixamo-compatible rig)
+// Ready Player Me animation clips (Mixamo-compatible rig) retargeted by bone name.
+const CLIP_URLS = [
+  "/idle_feminine.glb",   // F_Standing_Idle_001            (calm idle)
+  "/anim_idle2.glb",      // F_Standing_Idle_Variations_002 (livelier idle)
+  "/anim_talk1.glb",      // F_Talking_Variations_001       (gesture while talking)
+  "/anim_talk2.glb",      // F_Talking_Variations_002
+  "/anim_talk3.glb",      // F_Talking_Variations_003
+]
 useGLTF.preload(MODEL_URL)
-useGLTF.preload(IDLE_URL)
+CLIP_URLS.forEach(u => useGLTF.preload(u))
 
-// Facial expressions per mood, using the model's ARKit blendshape names.
 const MOOD_TO_EXPRESSION = {
   happy:       { mouthSmileLeft: 0.5, mouthSmileRight: 0.5, cheekSquintLeft: 0.2, cheekSquintRight: 0.2 },
   concerned:   { mouthFrownLeft: 0.4, mouthFrownRight: 0.4, browInnerUp: 0.3 },
@@ -29,13 +35,30 @@ const MANAGED_MORPHS = [
   ...new Set(Object.values(MOOD_TO_EXPRESSION).flatMap(o => Object.keys(o))),
 ]
 
-function NovaModel({ moodRef, isSpeakingRef, currentVisemeRef, onLoaded }) {
+function NovaModel({ moodRef, isSpeakingRef, currentVisemeRef, poseSeedRef, onLoaded }) {
   const group = useRef()
   const { scene } = useGLTF(MODEL_URL)
-  const { animations: idleClips } = useGLTF(IDLE_URL)
-  const { actions, names } = useAnimations(idleClips, group)
+  // Load each clip GLB and merge their AnimationClips into one list.
+  const clipGltfs = CLIP_URLS.map(u => useGLTF(u))
+  const clips = useMemo(
+    () => clipGltfs.flatMap(g => g.animations),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    clipGltfs.map(g => g.animations)
+  )
+  const { actions, names } = useAnimations(clips, group)
   const morphMeshesRef = useRef([])
+  const activeRef = useRef(null)
   const blink = useRef({ t: 0, next: 2 + Math.random() * 2 })
+
+  const idleName = useMemo(() => names.find(n => n === "F_Standing_Idle_001") || names[0], [names])
+  const idle2Name = useMemo(() => names.find(n => n.includes("Idle_Variations")) || idleName, [names, idleName])
+  const talkNames = useMemo(() => names.filter(n => n.includes("Talking")), [names])
+
+  function pickClip(mood, speaking, seed) {
+    if (speaking && talkNames.length) return talkNames[Math.abs(seed) % talkNames.length]
+    if (mood === "happy" || mood === "encouraging") return idle2Name
+    return idleName
+  }
 
   useEffect(() => {
     const meshes = []
@@ -49,22 +72,22 @@ function NovaModel({ moodRef, isSpeakingRef, currentVisemeRef, onLoaded }) {
     onLoaded?.()
   }, [scene])
 
-  // Play the looping idle body animation (breathing + subtle gestures).
-  useEffect(() => {
-    if (!names.length) return
-    const action = actions[names[0]]
-    if (action) {
-      action.reset().fadeIn(0.4).play()
-      return () => action.fadeOut(0.3)
-    }
-  }, [actions, names])
-
-  // Face is not touched by the idle clip, so we drive morphs here.
   useFrame((state, delta) => {
-    const t = state.clock.elapsedTime
+    // Switch/crossfade body clip based on mood, speaking, and per-topic pose seed.
+    if (names.length) {
+      const desired = pickClip(moodRef.current, isSpeakingRef.current, poseSeedRef.current)
+      if (desired && activeRef.current !== desired && actions[desired]) {
+        const prev = activeRef.current
+        if (prev && actions[prev]) actions[prev].fadeOut(0.4)
+        actions[desired].reset().fadeIn(0.4).play()
+        activeRef.current = desired
+      }
+    }
+
     const meshes = morphMeshesRef.current
     if (!meshes.length) return
 
+    const t = state.clock.elapsedTime
     const isSpeaking = isSpeakingRef.current
     const mood = moodRef.current
 
@@ -90,33 +113,28 @@ function NovaModel({ moodRef, isSpeakingRef, currentVisemeRef, onLoaded }) {
         const i = dict[name]
         if (i !== undefined) inf[i] += (target - inf[i]) * rate
       }
-      const set = (name, v) => {
-        const i = dict[name]
-        if (i !== undefined) inf[i] = v
-      }
+      const set = (name, v) => { const i = dict[name]; if (i !== undefined) inf[i] = v }
 
       MANAGED_MORPHS.forEach(name => ease(name, 0, 0.25))
-
       set("eyeBlinkLeft", blinkVal)
       set("eyeBlinkRight", blinkVal)
-
       ease("jawOpen", jawTarget, 0.5)
       ease("mouthOpen", jawTarget * 0.5, 0.5)
       if (hasViseme) ease(viseme, 0.6, 0.5)
-
       Object.entries(expr).forEach(([name, target]) => ease(name, target, 0.1))
     })
   })
 
   return (
     <group ref={group}>
-      {/* Head-and-shoulders framing: raised + centered on the face */}
+      {/* Head-and-shoulders framing */}
       <primitive object={scene} scale={1.0} position={[0, -1.55, 0]} rotation={[0, 0, 0]} />
     </group>
   )
 }
 
-const AvatarCanvas = React.memo(function AvatarCanvas({ moodRef, isSpeakingRef, currentVisemeRef, onLoaded }) {
+const AvatarCanvas = React.memo(function AvatarCanvas(props) {
+  const { moodRef, isSpeakingRef, currentVisemeRef, poseSeedRef, onLoaded } = props
   return (
     <Canvas
       camera={{ position: [0, 0, 1.35], fov: 30 }}
@@ -124,14 +142,17 @@ const AvatarCanvas = React.memo(function AvatarCanvas({ moodRef, isSpeakingRef, 
       gl={{ preserveDrawingBuffer: true }}
       frameloop="always"
     >
-      <ambientLight intensity={1.25} />
-      <directionalLight position={[2, 3, 4]} intensity={1.4} />
-      <directionalLight position={[-2, 1, 2]} intensity={0.5} />
+      {/* Studio lighting: key + fill + cool rim from behind */}
+      <ambientLight intensity={1.05} />
+      <directionalLight position={[2, 3, 4]} intensity={1.35} />
+      <directionalLight position={[-2, 1, 2]} intensity={0.45} />
+      <directionalLight position={[0, 2.5, -3]} intensity={0.9} color="#c7d2fe" />
       <Suspense fallback={null}>
         <NovaModel
           moodRef={moodRef}
           isSpeakingRef={isSpeakingRef}
           currentVisemeRef={currentVisemeRef}
+          poseSeedRef={poseSeedRef}
           onLoaded={onLoaded}
         />
       </Suspense>
@@ -139,13 +160,15 @@ const AvatarCanvas = React.memo(function AvatarCanvas({ moodRef, isSpeakingRef, 
   )
 })
 
-export default function Avatar({ mood = "idle", isSpeaking = false, currentViseme = 0 }) {
+export default function Avatar({ mood = "idle", isSpeaking = false, currentViseme = 0, poseSeed = 0 }) {
   const moodRef = useRef(mood)
   const isSpeakingRef = useRef(isSpeaking)
   const currentVisemeRef = useRef(currentViseme)
+  const poseSeedRef = useRef(poseSeed)
   moodRef.current = mood
   isSpeakingRef.current = isSpeaking
   currentVisemeRef.current = currentViseme
+  poseSeedRef.current = poseSeed
 
   const [loaded, setLoaded] = useState(false)
   const handleLoaded = useCallback(() => setLoaded(true), [])
@@ -153,9 +176,22 @@ export default function Avatar({ mood = "idle", isSpeaking = false, currentVisem
   return (
     <div style={{
       width: "100%", height: "100%", minHeight: "400px",
-      background: "linear-gradient(180deg, #EDE9FE 0%, #F0FDF4 100%)",
+      background: "radial-gradient(120% 90% at 50% 0%, #F5F3FF 0%, #EDE9FE 45%, #E0F2F1 100%)",
       position: "relative", overflow: "hidden",
     }}>
+      {/* Soft studio glow behind the head */}
+      <div style={{
+        position: "absolute", inset: 0, pointerEvents: "none",
+        background: "radial-gradient(42% 34% at 50% 34%, rgba(255,255,255,0.85), rgba(255,255,255,0) 70%)",
+      }} />
+      {/* Subtle grounding shadow under the bust */}
+      <div style={{
+        position: "absolute", left: "50%", bottom: "18px", transform: "translateX(-50%)",
+        width: "62%", height: "26px", borderRadius: "50%",
+        background: "radial-gradient(ellipse at center, rgba(76,29,149,0.18), rgba(76,29,149,0) 70%)",
+        filter: "blur(3px)", pointerEvents: "none",
+      }} />
+
       {!loaded && (
         <div style={{
           position: "absolute", inset: 0, display: "flex",
@@ -166,14 +202,17 @@ export default function Avatar({ mood = "idle", isSpeaking = false, currentVisem
           Loading Miss Nova…
         </div>
       )}
+
       <div style={{ position: "absolute", inset: 0 }}>
         <AvatarCanvas
           moodRef={moodRef}
           isSpeakingRef={isSpeakingRef}
           currentVisemeRef={currentVisemeRef}
+          poseSeedRef={poseSeedRef}
           onLoaded={handleLoaded}
         />
       </div>
+
       <div style={{
         position: "absolute", bottom: "8px", left: 0, right: 0,
         textAlign: "center", fontSize: "11px", fontWeight: 700,

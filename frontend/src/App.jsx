@@ -319,7 +319,7 @@ export default function App() {
             flexDirection: "column",
             background: "linear-gradient(180deg, #FAF5FF 0%, #F0FDF4 100%)",
           }}>
-            <Avatar mood={avatarMood} isSpeaking={isSpeaking} currentViseme={currentViseme} />
+            <Avatar mood={avatarMood} isSpeaking={isSpeaking} currentViseme={currentViseme} poseSeed={currentModuleIdx * 10 + currentTopicIdx} />
           </div>
         </div>
 

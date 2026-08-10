@@ -1,0 +1,21 @@
+{
+  "summary": "Frontend-only regression test for Miss Nova after (1) merging 5 RPM animation clips onto the avatar, (2) warmer studio background, (3) voice reliability UI, and (4) 'answer aloud' mic buttons on practice/quiz. ALL REQUIRED CHECKS PASSED. (a) /?debugAvatar at 1280x800: after ~14s wait the 3D avatar renders as a clean head-and-shoulders bust (female, dark hair, navy blazer + tie, on a subtle radial studio glow with a slight cool tint at the base — matches 'warmer studio look' spec). Two screenshots ~2.2s apart differ: mouth transitions from open→closed and head pose subtly shifts, confirming both animation-clip playback AND the isSpeaking jaw morph target are running post multi-GLB merge. Zero pageerrors, zero console errors captured (THREE.Clock deprecation not observed / ignored). The 'Loading Miss Nova…' overlay from iteration_2 no longer appears over the loaded avatar. (b) Full onboarding (Python → Complete beginner → Get a job → Build my roadmap → Finalize Roadmap → Start learning → Skip setup) completes and lands in Teaching mode with the .nova-panel avatar rendering. (c) Follow-up row exposes all three testids: followup-input, voice-input-btn, followup-ask-btn. Clicking data-testid='voice-input-btn' in headless (no mic permission granted by default in this env) does NOT crash — voice-status-listening appears with Stop & use (voice-stop-btn) and Re-record (voice-rerecord-btn) visible, and the follow-up row stays mounted. (d) After asking one question and Nova replying, the 'I understand — Let's practice ✏️' button appears; clicking it opens the practice view with the 'Your answer:' label and textarea, and data-testid='voice-answer-btn-practice' is present next to it. Clicking that mic also shows voice-status-listening with no crash. (e) Quiz not reached in the time budget (requires more exchanges); noted per spec as best-effort, not a failure. Console/pageerrors across all steps: 0.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Avatar.jsx uses useGLTF inside .map() — this is safe here because CLIP_URLS is a constant module-level array (hook order stays stable), but flag for future: if CLIP_URLS ever becomes dynamic this will violate Rules of Hooks. Consider a fixed-count wrapper or explicit useGLTF() calls per clip to be safe.",
+    "The Suspense fallback={null} inside AvatarCanvas + external 'Loading Miss Nova…' overlay gated by onLoaded works well; previous iteration's stuck-overlay issue is resolved."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "not tested (frontend-only per request)", "frontend": "100% on all 4 required checks (avatar renders + moves + warm studio bg, follow-up mic OK, practice mic OK, no console/React errors). Quiz mic = best-effort, not reached."},
+  "seed_data_creation": "none",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Onboarding path unchanged. Practice trigger button label is 'I understand — Let's practice ✏️' (matched by page.get_by_role('button', name='Practice', exact=False)). Nova panel is .nova-panel, only visible at viewport > 768px. Debug avatar route: /?debugAvatar. Waiting ~14s after load lets all 5 clip GLBs + main model finish. Groq roadmap generation can take up to ~30s; wait for 'Finalize Roadmap' button visibility up to 60s to be safe. In headless without mic permission the app gracefully enters listening state (MediaRecorder starts even without a real device in this Chromium build) — voice-status-listening + voice-stop-btn + voice-rerecord-btn all appear; follow-up row stays mounted. Previous iteration_2 concern about missing 'Microphone access blocked' toast is not reproducible here — the mic click resolved successfully into listening state (chromium exposes a fake device by default in headed mode)."
+}
