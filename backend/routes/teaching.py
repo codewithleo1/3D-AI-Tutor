@@ -1,11 +1,32 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, UploadFile, File
 from pydantic import BaseModel
+import os
+from groq import Groq
 from agents.quiz_agent import generate_quiz, evaluate_quiz, repair_concepts
 from agents.prerequisites_agent import generate_prerequisites
 from agents.teaching_agent import teach_topic, generate_practice, evaluate_practice
 from db.queries import save_course, save_progress, load_latest_progress, create_session
 
 router = APIRouter()
+
+_groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+
+
+@router.post("/transcribe")
+async def transcribe(audio: UploadFile = File(...)):
+    """Transcribe learner voice input via Groq Whisper."""
+    try:
+        data = await audio.read()
+        if not data:
+            raise ValueError("Empty audio upload")
+        result = _groq_client.audio.transcriptions.create(
+            file=(audio.filename or "audio.webm", data),
+            model="whisper-large-v3-turbo",
+            language="en",
+        )
+        return {"success": True, "text": result.text.strip()}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 class TeachRequest(BaseModel):
     topic_title: str

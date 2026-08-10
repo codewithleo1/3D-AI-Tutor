@@ -27,7 +27,68 @@ export default function TopicView({ topic, module: mod, course, level, onComplet
   const [messages, setMessages] = useState([])
   const [exchangeCount, setExchangeCount] = useState(0)
   const [phase, setPhase] = useState("loading")
+  const [recording, setRecording] = useState(false)
+  const [transcribing, setTranscribing] = useState(false)
+  const mediaRecorderRef = useState(() => ({ current: null }))[0]
+  const audioChunksRef = useState(() => ({ current: [] }))[0]
   // speak, stop, isSpeaking come from App.jsx via props
+
+  async function toggleRecording() {
+    if (recording) {
+      mediaRecorderRef.current?.stop()
+      return
+    }
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
+      setError("Voice input isn't supported in this browser. Please type your question.")
+      return
+    }
+    let stream
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+    } catch {
+      setError("Microphone access was blocked. Allow mic permission to ask by voice, or type your question.")
+      setRecording(false)
+      return
+    }
+    try {
+      const mr = new MediaRecorder(stream)
+      audioChunksRef.current = []
+      mr.ondataavailable = e => { if (e.data.size > 0) audioChunksRef.current.push(e.data) }
+      mr.onstop = async () => {
+        stream.getTracks().forEach(t => t.stop())
+        setRecording(false)
+        const blob = new Blob(audioChunksRef.current, { type: "audio/webm" })
+        if (blob.size === 0) return
+        setTranscribing(true)
+        try {
+          const form = new FormData()
+          form.append("audio", blob, "question.webm")
+          const res = await axios.post(`${API}/transcribe`, form, {
+            headers: { "Content-Type": "multipart/form-data" },
+          })
+          const text = (res.data.text || "").trim()
+          if (text) {
+            setFollowUp(text)
+            await handleFollowUp(text)
+          } else {
+            setError("I couldn't catch that — please try speaking again.")
+          }
+        } catch {
+          setError("Couldn't transcribe your voice. Please try again or type your question.")
+        } finally {
+          setTranscribing(false)
+        }
+      }
+      mediaRecorderRef.current = mr
+      mr.start()
+      setError("")
+      setRecording(true)
+    } catch {
+      stream?.getTracks().forEach(t => t.stop())
+      setError("Couldn't start recording. Please type your question instead.")
+      setRecording(false)
+    }
+  }
 
   useEffect(() => {
     setPracticeEval(null)
@@ -83,13 +144,14 @@ export default function TopicView({ topic, module: mod, course, level, onComplet
     }
   }
 
-  async function handleFollowUp() {
-    if (!followUp.trim()) return
+  async function handleFollowUp(overrideText) {
+    const question = (typeof overrideText === "string" ? overrideText : followUp).trim()
+    if (!question) return
     setFollowUpLoading(true)
     const newHistory = [
       ...history,
       { role: "assistant", content: teaching.explanation || teaching.answer || "" },
-      { role: "user", content: followUp },
+      { role: "user", content: question },
     ]
     setHistory(newHistory)
     setFollowUp("")
@@ -108,7 +170,7 @@ export default function TopicView({ topic, module: mod, course, level, onComplet
         setTeaching(data)
         setMessages(prev => [
           ...prev,
-          { role: "user", text: followUp },
+          { role: "user", text: question },
           { role: "nova", data }
         ])
         setExchangeCount(prev => prev + 1)
@@ -459,18 +521,34 @@ export default function TopicView({ topic, module: mod, course, level, onComplet
           <div style={{ display: "flex", gap: "10px", marginBottom: "16px" }}>
             <input
               type="text"
-              placeholder="Ask Miss Nova a question..."
+              placeholder={transcribing ? "Transcribing your voice…" : "Ask Miss Nova a question..."}
               value={followUp}
               onChange={e => setFollowUp(e.target.value)}
               onKeyDown={e => e.key === "Enter" && handleFollowUp()}
+              disabled={transcribing}
+              data-testid="followup-input"
               style={{
                 flex: 1, padding: "12px 16px", borderRadius: "12px",
                 border: "1.5px solid #E5E7EB", fontSize: "14px",
                 color: "#111827", outline: "none", fontFamily: "Inter, sans-serif"
               }}
             />
-            <button onClick={handleFollowUp}
+            <button onClick={toggleRecording}
+              disabled={transcribing || followUpLoading}
+              title={recording ? "Stop recording" : "Ask by voice"}
+              data-testid="voice-input-btn"
+              style={{
+                padding: "12px 16px", borderRadius: "12px", border: "none",
+                background: recording ? "#EF4444" : "#EDE9FE",
+                color: recording ? "white" : "#6D28D9", fontWeight: 600,
+                cursor: "pointer", fontSize: "16px",
+                animation: recording ? "pulse 1s infinite" : "none",
+              }}>
+              {transcribing ? "…" : recording ? "⏺" : "🎤"}
+            </button>
+            <button onClick={() => handleFollowUp()}
               disabled={!followUp.trim() || followUpLoading}
+              data-testid="followup-ask-btn"
               style={{
                 padding: "12px 20px", borderRadius: "12px", border: "none",
                 background: "#7C3AED", color: "white", fontWeight: 600,

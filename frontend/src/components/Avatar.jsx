@@ -1,27 +1,20 @@
 import React, { useRef, useEffect, useState, useCallback, Suspense } from "react"
 import { Canvas, useFrame } from "@react-three/fiber"
 import { useGLTF, useAnimations } from "@react-three/drei"
-import * as THREE from "three"
 
-// The Ready Player Me model that ships with the app.
-// (Previously this pointed at "/nova.glb" — the old model — which is why
-//  the avatar showed nothing after switching to the RPM model.)
 const MODEL_URL = "/rpm_test.glb"
+const IDLE_URL = "/idle_feminine.glb" // Ready Player Me standing idle (Mixamo-compatible rig)
 useGLTF.preload(MODEL_URL)
+useGLTF.preload(IDLE_URL)
 
-const MOOD_TO_ANIMATION = {
-  idle: "Idle", explaining: "Talking", thinking: "Thinking",
-  quiz: "Thinking", happy: "Happy", concerned: "Sad", encouraging: "Talking",
-}
-
-// ARKit / RPM blendshapes used to convey mood on the face.
+// Facial expressions per mood, using the model's ARKit blendshape names.
 const MOOD_TO_EXPRESSION = {
-  happy:      { mouthSmileLeft: 0.5, mouthSmileRight: 0.5, cheekSquintLeft: 0.2, cheekSquintRight: 0.2 },
-  concerned:  { mouthFrownLeft: 0.4, mouthFrownRight: 0.4, browInnerUp: 0.3 },
-  thinking:   { browInnerUp: 0.35, eyeSquintLeft: 0.15, eyeSquintRight: 0.15 },
-  explaining: { browOuterUpLeft: 0.2, browOuterUpRight: 0.2, mouthSmileLeft: 0.15, mouthSmileRight: 0.15 },
-  encouraging:{ mouthSmileLeft: 0.35, mouthSmileRight: 0.35 },
-  idle:       {},
+  happy:       { mouthSmileLeft: 0.5, mouthSmileRight: 0.5, cheekSquintLeft: 0.2, cheekSquintRight: 0.2 },
+  concerned:   { mouthFrownLeft: 0.4, mouthFrownRight: 0.4, browInnerUp: 0.3 },
+  thinking:    { browInnerUp: 0.35, eyeSquintLeft: 0.15, eyeSquintRight: 0.15 },
+  explaining:  { browOuterUpLeft: 0.2, browOuterUpRight: 0.2, mouthSmileLeft: 0.15, mouthSmileRight: 0.15 },
+  encouraging: { mouthSmileLeft: 0.35, mouthSmileRight: 0.35 },
+  idle:        {},
 }
 
 const VISEME_MAP = {
@@ -30,7 +23,6 @@ const VISEME_MAP = {
   10: "viseme_aa", 11: "viseme_E", 12: "viseme_I", 13: "viseme_O", 14: "viseme_U",
 }
 
-// Morphs we actively drive — everything else is left at rest.
 const MANAGED_MORPHS = [
   "jawOpen", "mouthOpen", "eyeBlinkLeft", "eyeBlinkRight",
   ...Object.values(VISEME_MAP),
@@ -39,10 +31,10 @@ const MANAGED_MORPHS = [
 
 function NovaModel({ moodRef, isSpeakingRef, currentVisemeRef, onLoaded }) {
   const group = useRef()
-  const { scene, animations } = useGLTF(MODEL_URL)
-  const { actions, names } = useAnimations(animations, group)
+  const { scene } = useGLTF(MODEL_URL)
+  const { animations: idleClips } = useGLTF(IDLE_URL)
+  const { actions, names } = useAnimations(idleClips, group)
   const morphMeshesRef = useRef([])
-  const bonesRef = useRef({})
   const blink = useRef({ t: 0, next: 2 + Math.random() * 2 })
 
   useEffect(() => {
@@ -52,42 +44,30 @@ function NovaModel({ moodRef, isSpeakingRef, currentVisemeRef, onLoaded }) {
         obj.frustumCulled = false
         if (obj.morphTargetDictionary && obj.morphTargetInfluences) meshes.push(obj)
       }
-      if (obj.isBone) {
-        if (obj.name === "Head") bonesRef.current.head = obj
-        if (obj.name === "Neck") bonesRef.current.neck = obj
-        if (obj.name === "Spine2") bonesRef.current.spine = obj
-      }
     })
     morphMeshesRef.current = meshes
     onLoaded?.()
   }, [scene])
 
-  // If the model DOES have clips, play the mood-matched one (RPM export has none).
+  // Play the looping idle body animation (breathing + subtle gestures).
   useEffect(() => {
-    if (!actions || names.length === 0) return
-    const target = MOOD_TO_ANIMATION[moodRef.current] || "Idle"
-    const action = actions[target] || actions[names[0]]
-    action?.reset().fadeIn(0.3).play()
-    return () => action?.fadeOut(0.2)
+    if (!names.length) return
+    const action = actions[names[0]]
+    if (action) {
+      action.reset().fadeIn(0.4).play()
+      return () => action.fadeOut(0.3)
+    }
   }, [actions, names])
 
+  // Face is not touched by the idle clip, so we drive morphs here.
   useFrame((state, delta) => {
     const t = state.clock.elapsedTime
-    const mood = moodRef.current
-    const isSpeaking = isSpeakingRef.current
-
-    // Subtle "alive" idle motion (head sway) — the model has no baked animation.
-    const { head, neck } = bonesRef.current
-    if (head) {
-      head.rotation.y = Math.sin(t * 0.5) * 0.05
-      head.rotation.x = Math.sin(t * 0.8) * 0.03 + (isSpeaking ? Math.sin(t * 9) * 0.03 : 0)
-    }
-    if (neck) neck.rotation.y = Math.sin(t * 0.5) * 0.02
-
     const meshes = morphMeshesRef.current
     if (!meshes.length) return
 
-    // Blink scheduler: quick eyelid pulse every few seconds.
+    const isSpeaking = isSpeakingRef.current
+    const mood = moodRef.current
+
     const b = blink.current
     b.t += delta
     let blinkVal = 0
@@ -97,9 +77,9 @@ function NovaModel({ moodRef, isSpeakingRef, currentVisemeRef, onLoaded }) {
       else { b.t = 0; b.next = 2 + Math.random() * 3 }
     }
 
-    // Mouth movement while speaking (Web Speech gives no phonemes, so we animate the jaw).
     const viseme = VISEME_MAP[currentVisemeRef.current] || "viseme_sil"
-    const jawTarget = isSpeaking ? 0.12 + Math.abs(Math.sin(t * 11)) * 0.33 : 0
+    const hasViseme = isSpeaking && currentVisemeRef.current > 0
+    const jawTarget = isSpeaking ? (hasViseme ? 0.06 : 0.12 + Math.abs(Math.sin(t * 11)) * 0.3) : 0
     const expr = MOOD_TO_EXPRESSION[mood] || {}
 
     meshes.forEach(mesh => {
@@ -115,15 +95,14 @@ function NovaModel({ moodRef, isSpeakingRef, currentVisemeRef, onLoaded }) {
         if (i !== undefined) inf[i] = v
       }
 
-      // Relax everything we manage, then re-apply targets below.
-      MANAGED_MORPHS.forEach(name => ease(name, 0, 0.2))
+      MANAGED_MORPHS.forEach(name => ease(name, 0, 0.25))
 
       set("eyeBlinkLeft", blinkVal)
       set("eyeBlinkRight", blinkVal)
 
       ease("jawOpen", jawTarget, 0.5)
       ease("mouthOpen", jawTarget * 0.5, 0.5)
-      if (isSpeaking) ease(viseme, 0.5, 0.4)
+      if (hasViseme) ease(viseme, 0.6, 0.5)
 
       Object.entries(expr).forEach(([name, target]) => ease(name, target, 0.1))
     })
@@ -131,7 +110,8 @@ function NovaModel({ moodRef, isSpeakingRef, currentVisemeRef, onLoaded }) {
 
   return (
     <group ref={group}>
-      <primitive object={scene} scale={1.0} position={[0, -0.9, 0]} rotation={[0, 0, 0]} />
+      {/* Head-and-shoulders framing: raised + centered on the face */}
+      <primitive object={scene} scale={1.0} position={[0, -1.55, 0]} rotation={[0, 0, 0]} />
     </group>
   )
 }
@@ -139,14 +119,14 @@ function NovaModel({ moodRef, isSpeakingRef, currentVisemeRef, onLoaded }) {
 const AvatarCanvas = React.memo(function AvatarCanvas({ moodRef, isSpeakingRef, currentVisemeRef, onLoaded }) {
   return (
     <Canvas
-      camera={{ position: [0, 0, 3], fov: 60 }}
+      camera={{ position: [0, 0, 1.35], fov: 30 }}
       style={{ width: "100%", height: "100%" }}
       gl={{ preserveDrawingBuffer: true }}
       frameloop="always"
     >
-      <ambientLight intensity={1.2} />
-      <directionalLight position={[2, 4, 4]} intensity={1.3} />
-      <directionalLight position={[-2, 2, 2]} intensity={0.5} />
+      <ambientLight intensity={1.25} />
+      <directionalLight position={[2, 3, 4]} intensity={1.4} />
+      <directionalLight position={[-2, 1, 2]} intensity={0.5} />
       <Suspense fallback={null}>
         <NovaModel
           moodRef={moodRef}
@@ -176,7 +156,6 @@ export default function Avatar({ mood = "idle", isSpeaking = false, currentVisem
       background: "linear-gradient(180deg, #EDE9FE 0%, #F0FDF4 100%)",
       position: "relative", overflow: "hidden",
     }}>
-      {/* Loading hint — only until the WebGL canvas has the model */}
       {!loaded && (
         <div style={{
           position: "absolute", inset: 0, display: "flex",

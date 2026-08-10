@@ -42,6 +42,17 @@ and shared latest local files (Avatar.jsx, App.jsx, Sidebar.jsx, main.jsx). Avat
 - Copy `frontend/src/components/Avatar.jsx` (the fix) and keep `frontend/public/rpm_test.glb` committed (Vercel).
 - On Render backend, set env: DATABASE_URL, GROQ_API_KEY, ALLOWED_ORIGINS (include the Vercel origin).
 
+## Enhancements added (2026-06 session, verified by testing agent iteration_2)
+- IDLE BODY MOTION: bundled Ready Player Me idle clip `public/idle_feminine.glb` (Mixamo-compatible rig); Avatar.jsx loads it via a 2nd useGLTF + useAnimations and plays it looped, retargeting onto the RPM avatar by bone name. Result: gentle breathing/gesture motion instead of a static statue.
+- REAL LIP SYNC: `useSpeech.js` now returns `currentViseme` and drives approximate visemes from the spoken text (onboundary + char→viseme cursor). Avatar applies `viseme_*` morphs + jaw while speaking.
+- VOICE INPUT (Groq Whisper): backend `POST /api/transcribe` (whisper-large-v3-turbo) verified 200. TopicView follow-up row has a mic button (data-testid voice-input-btn) → MediaRecorder → /api/transcribe → auto-asks Miss Nova. Includes graceful errors when mic is blocked/unsupported.
+- CAMERA FRAMING: head-and-shoulders bust shot (camera z=1.35 fov 30, model y=-1.55).
+
+## Files changed this session (to copy to user's repo)
+- frontend/src/components/Avatar.jsx, frontend/src/hooks/useSpeech.js, frontend/src/components/TopicView.jsx, frontend/src/index.css (pulse keyframe)
+- NEW asset: frontend/public/idle_feminine.glb (commit for Vercel)
+- backend/routes/teaching.py (+ /api/transcribe)
+
 ## Backlog / next
 - P1: Run backend here (needs GROQ_API_KEY + Neon DATABASE_URL) to test full onboarding→teaching→avatar flow.
 - P1: Add a body idle animation (e.g. Mixamo idle retargeted to the RPM rig) so the avatar isn't static.
