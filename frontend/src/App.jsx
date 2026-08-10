@@ -67,7 +67,7 @@ export default function App() {
   const [currentModuleIdx, setCurrentModuleIdx] = useState(0)
   const [currentTopicIdx, setCurrentTopicIdx] = useState(0)
   const [avatarMood, setAvatarMood] = useState("idle")
-  const { speak, stop, isSpeaking } = useSpeech()
+  const { speak, stop, isSpeaking, currentViseme } = useSpeech()
 
   const {
     progress,
@@ -319,7 +319,7 @@ export default function App() {
             flexDirection: "column",
             background: "linear-gradient(180deg, #FAF5FF 0%, #F0FDF4 100%)",
           }}>
-            <Avatar mood={avatarMood} isSpeaking={isSpeaking} />
+            <Avatar mood={avatarMood} isSpeaking={isSpeaking} currentViseme={currentViseme} poseSeed={currentModuleIdx * 10 + currentTopicIdx} />
           </div>
         </div>
 

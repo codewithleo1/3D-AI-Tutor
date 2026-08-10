@@ -1,0 +1,27 @@
+{
+  "summary": "Frontend-only testing of Miss Nova avatar fix and full onboarding-to-teaching flow with live backend. Both scenarios pass: ?debugAvatar mounts a WebGL canvas and renders the 3D humanoid RPM model (Miss Nova) with no console/React errors. Full onboarding (goal=Python -> level=Complete beginner -> hours Continue -> objective=Get a job -> Build my roadmap -> Finalize Roadmap -> Start learning -> Skip setup) lands successfully in Teaching mode with left Sidebar (6 modules, 24 topics), center TopicView showing Groq /teach explanation + code example for 'Introduction to Python', and the right-hand 320px Nova panel with the 3D avatar canvas visibly rendering. No uncaught console errors and no React error overlay at any step. Roadmap generated in ~4s, teaching content in <5s (much faster than 30s budget).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Avatar (debug + teaching Nova panel)", "issues": ["'Loading Miss Nova…' overlay text remains visible behind/over the avatar even after the GLB is fully loaded and painted. It sits at inset:0 with opacity 0.6 and is never hidden after the model paints. Cosmetic — the avatar itself renders correctly, but text bleeds through the model chest area. Consider tracking Suspense/load state and hiding this hint on load."]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "(Cosmetic) Hide 'Loading Miss Nova…' overlay once the GLTF has loaded (e.g. via a loaded state from useGLTF or an onLoad callback / Suspense fallback outside the canvas), otherwise the label bleeds through the rendered avatar.",
+    "(Nice-to-have) Add data-testid attributes to key onboarding buttons (Continue, level/objective options, Build my roadmap, Finalize, Start learning, Skip setup) and to the Nova avatar panel/canvas — currently automated flows must match on visible text which is fragile.",
+    "(Nice-to-have) Deprecation warning from three.js: 'THREE.Clock has been deprecated. Please use THREE.Timer instead.' emitted by @react-three/fiber's frame loop — not a bug, just an upstream warning."
+  ],
+  "critical_code_review_comments": [
+    "Avatar.jsx renders 'Loading Miss Nova…' unconditionally under the canvas — should be gated on model loaded state to prevent the label bleeding through the 3D model.",
+    "Interactive elements lack data-testid attributes across the onboarding wizard, Prerequisites screen, and teaching layout, making automated testing brittle (must rely on visible text)."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "not tested (frontend-only per request)", "frontend": "100% (both scenarios pass)"},
+  "seed_data_creation": "none",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Debug avatar route (?debugAvatar) verified working at 1280x800 with GPU-backed WebGL2. Full onboarding flow buttons are located by visible text: input for goal, 'Continue →', 'Complete beginner', 'Continue →', 'Get a job', 'Build my roadmap ✨', '✅ Finalize Roadmap', 'Start learning →', 'Skip setup'. Nova avatar right panel is .nova-panel and only visible at >768px viewport. Teaching page contains 4 <canvas> elements (avatar + likely some syntax-highlight/code-related canvases); the avatar canvas is inside .nova-panel."
+}

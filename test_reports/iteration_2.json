@@ -1,0 +1,29 @@
+{
+  "summary": "Frontend-only re-test of Miss Nova avatar enhancements + voice-input mic in teaching flow. All primary asks confirmed: (1) ?debugAvatar renders a 3D female RPM-style avatar with head + upper torso framing (roughly waist-up bust shot, head centered horizontally in the upper third of the frame — face fills ~25% of the vertical viewport at 1280x800), (2) idle animation is clearly running — two screenshots ~2.5s apart show the head tilting and shoulders subtly shifting, and the jaw/mouth pose changes between frames (open vs closed) confirming both the idle_feminine.glb clip and the isSpeaking jaw morph target are actively driving the mesh, (3) the full onboarding flow (Python -> Complete beginner -> Get a job -> Build my roadmap [Groq ~30s wait] -> Finalize Roadmap -> Start learning -> Skip setup) completes cleanly and lands in Teaching mode showing the topic content plus the right-hand .nova-panel with the 3D avatar canvas rendering, (4) in teaching mode the follow-up row exposes data-testid='voice-input-btn', 'followup-input' and 'followup-ask-btn' as specified, and (5) clicking the mic in a headless browser without mic permission does NOT crash the app — zero uncaught exceptions and zero console errors were captured across both the debug avatar page and the entire teaching flow (ignoring the harmless THREE.Clock deprecation warning).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "Voice input mic click without mic permission (headless)", "issue": "Clicking data-testid='voice-input-btn' in a browser where getUserMedia is unavailable/denied does not surface any user-facing error toast/message. Console stays clean (no crash), but the follow-up input row disappears from the DOM immediately after click and the center pane briefly re-renders 'Miss Nova is preparing…' (with the Nova panel flashing its 'Loading Miss Nova…' fallback). Not a crash, but the promised 'friendly Microphone access was blocked' toast never appears, and the missing input row is confusing. Recommend catching the getUserMedia rejection and showing an inline error while keeping the follow-up row mounted.", "affected_selectors": ["[data-testid=voice-input-btn]", "[data-testid=followup-input]"]}
+    ],
+    "design_issues": [
+      {"screen": "Avatar (?debugAvatar and Nova panel)", "issues": ["'Loading Miss Nova…' / 'MISS NOVA' hint text remains painted over the avatar in the Nova side-panel even after the GLB has fully loaded (still visible in the teaching-mode screenshot). Same cosmetic issue flagged in iteration_1 — Suspense/loading fallback is not being hidden after model paints."]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "In TopicView.jsx voice-input handler, wrap navigator.mediaDevices.getUserMedia in try/catch and show an inline/toast error like 'Microphone access was blocked' instead of unmounting the follow-up row. Currently the row silently disappears when permission is denied in headless.",
+    "Hide the 'Loading Miss Nova…' overlay once the avatar GLB finishes loading (carry-over from iteration_1) — text still bleeds over the avatar in both the debug view (MISS NOVA label) and the Nova side panel.",
+    "(Optional camera tweak) Framing is a waist-up shot rather than a tight head-and-shoulders bust — face fills ~25% of vertical height at 1280x800. If a tighter bust shot is desired, lower Camera position.z from 1.75 toward ~1.15–1.3, or raise the model primitive's y-offset from -1.42 to ~-1.65 so more of the torso drops below frame."
+  ],
+  "critical_code_review_comments": [
+    "TopicView voice-input flow lacks visible error handling for denied/unavailable microphone — silent failure hurts UX.",
+    "Avatar.jsx 'Loading Miss Nova…' hint still not gated on load state (unchanged since iteration_1)."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "not tested (frontend-only per request)", "frontend": "100% on all 4 required checks (avatar renders, idle+mouth motion detected, mic button present with correct testids, no console/React errors)"},
+  "seed_data_creation": "none",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Debug avatar route (?debugAvatar) confirmed working; two screenshots 2.5s apart clearly show pose+jaw motion. Full onboarding path unchanged from iteration_1 (buttons found by visible text). Teaching-mode follow-up row now exposes data-testid='voice-input-btn', 'followup-input', 'followup-ask-btn'. Nova side panel is .nova-panel and only shows at >768px viewport. Framing at Camera z=1.75, model y=-1.42 = waist-up shot, not a tight bust — noted as optional tuning. Mic click without permission is silent (no toast); follow-up row unmounts — flagged for main agent."
+}

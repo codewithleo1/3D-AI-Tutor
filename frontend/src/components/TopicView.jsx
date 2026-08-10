@@ -27,7 +27,123 @@ export default function TopicView({ topic, module: mod, course, level, onComplet
   const [messages, setMessages] = useState([])
   const [exchangeCount, setExchangeCount] = useState(0)
   const [phase, setPhase] = useState("loading")
+  const [recording, setRecording] = useState(false)
+  const [transcribing, setTranscribing] = useState(false)
+  const [recordTarget, setRecordTarget] = useState(null)
+  const mediaRecorderRef = useState(() => ({ current: null }))[0]
+  const audioChunksRef = useState(() => ({ current: [] }))[0]
+  const applyTextRef = useState(() => ({ current: null }))[0]
   // speak, stop, isSpeaking come from App.jsx via props
+
+  async function startVoice(target, apply) {
+    if (recording) { mediaRecorderRef.current?.stop(); return }
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
+      setError("Voice input isn't supported in this browser. Please type instead.")
+      return
+    }
+    let stream
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+    } catch {
+      setError("Microphone access was blocked. Allow mic permission, or type instead.")
+      setRecording(false); setRecordTarget(null); return
+    }
+    try {
+      const mr = new MediaRecorder(stream)
+      audioChunksRef.current = []
+      applyTextRef.current = apply
+      mr.ondataavailable = e => { if (e.data.size > 0) audioChunksRef.current.push(e.data) }
+      mr.onstop = async () => {
+        stream.getTracks().forEach(t => t.stop())
+        setRecording(false)
+        const blob = new Blob(audioChunksRef.current, { type: "audio/webm" })
+        if (blob.size === 0) { setRecordTarget(null); return }
+        setTranscribing(true)
+        try {
+          const form = new FormData()
+          form.append("audio", blob, "speech.webm")
+          const res = await axios.post(`${API}/transcribe`, form, {
+            headers: { "Content-Type": "multipart/form-data" },
+          })
+          const text = (res.data.text || "").trim()
+          if (text) applyTextRef.current?.(text)
+          else setError("I couldn't catch that — please try again.")
+        } catch {
+          setError("Couldn't transcribe your voice. Please try again or type instead.")
+        } finally {
+          setTranscribing(false); setRecordTarget(null)
+        }
+      }
+      mediaRecorderRef.current = mr
+      mr.start()
+      setError("")
+      setRecordTarget(target)
+      setRecording(true)
+    } catch {
+      stream?.getTracks().forEach(t => t.stop())
+      setError("Couldn't start recording. Please type instead.")
+      setRecording(false); setRecordTarget(null)
+    }
+  }
+
+  function renderMic(target, apply, testid) {
+    const active = recording && recordTarget === target
+    const busy = transcribing && recordTarget === target
+    const disabled = (recording && !active) || (transcribing && !busy) || followUpLoading
+    return (
+      <button type="button"
+        onClick={() => startVoice(target, apply)}
+        disabled={disabled}
+        title={active ? "Stop recording" : "Answer by voice"}
+        data-testid={testid}
+        style={{
+          padding: "10px 14px", borderRadius: "10px", border: "none",
+          background: active ? "#EF4444" : "#EDE9FE",
+          color: active ? "white" : "#6D28D9", fontWeight: 600,
+          cursor: disabled ? "not-allowed" : "pointer", fontSize: "16px", flexShrink: 0,
+          animation: active ? "pulse 1s infinite" : "none",
+          opacity: disabled ? 0.4 : 1,
+        }}>
+        {busy ? "…" : active ? "⏺" : "🎤"}
+      </button>
+    )
+  }
+
+  function renderVoiceStatus(target) {
+    if (recording && recordTarget === target) {
+      return (
+        <div data-testid="voice-status-listening" style={{
+          display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px",
+          fontSize: "13px", fontWeight: 600, color: "#DC2626",
+        }}>
+          <span style={{ animation: "pulse 1s infinite" }}>● Listening…</span>
+          <button type="button" onClick={() => mediaRecorderRef.current?.stop()}
+            data-testid="voice-stop-btn"
+            style={{ padding: "4px 10px", borderRadius: "8px", border: "1px solid #FCA5A5",
+              background: "#FEF2F2", color: "#DC2626", fontWeight: 600, cursor: "pointer", fontSize: "12px" }}>
+            Stop &amp; use
+          </button>
+          <button type="button" onClick={() => mediaRecorderRef.current?.stop()}
+            data-testid="voice-rerecord-btn"
+            style={{ padding: "4px 10px", borderRadius: "8px", border: "1px solid #E5E7EB",
+              background: "#F9FAFB", color: "#6B7280", fontWeight: 600, cursor: "pointer", fontSize: "12px" }}>
+            Re-record
+          </button>
+        </div>
+      )
+    }
+    if (transcribing && recordTarget === target) {
+      return (
+        <div data-testid="voice-status-transcribing" style={{
+          display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px",
+          fontSize: "13px", fontWeight: 600, color: "#6D28D9",
+        }}>
+          <span>✍️ Transcribing your voice…</span>
+        </div>
+      )
+    }
+    return null
+  }
 
   useEffect(() => {
     setPracticeEval(null)
@@ -83,13 +199,14 @@ export default function TopicView({ topic, module: mod, course, level, onComplet
     }
   }
 
-  async function handleFollowUp() {
-    if (!followUp.trim()) return
+  async function handleFollowUp(overrideText) {
+    const question = (typeof overrideText === "string" ? overrideText : followUp).trim()
+    if (!question) return
     setFollowUpLoading(true)
     const newHistory = [
       ...history,
       { role: "assistant", content: teaching.explanation || teaching.answer || "" },
-      { role: "user", content: followUp },
+      { role: "user", content: question },
     ]
     setHistory(newHistory)
     setFollowUp("")
@@ -108,7 +225,7 @@ export default function TopicView({ topic, module: mod, course, level, onComplet
         setTeaching(data)
         setMessages(prev => [
           ...prev,
-          { role: "user", text: followUp },
+          { role: "user", text: question },
           { role: "nova", data }
         ])
         setExchangeCount(prev => prev + 1)
@@ -456,21 +573,25 @@ export default function TopicView({ topic, module: mod, course, level, onComplet
           </button>
 
           {/* Follow up */}
+          {renderVoiceStatus("followup")}
           <div style={{ display: "flex", gap: "10px", marginBottom: "16px" }}>
             <input
               type="text"
-              placeholder="Ask Miss Nova a question..."
+              placeholder={transcribing && recordTarget === "followup" ? "Transcribing your voice…" : "Ask Miss Nova a question..."}
               value={followUp}
               onChange={e => setFollowUp(e.target.value)}
               onKeyDown={e => e.key === "Enter" && handleFollowUp()}
+              data-testid="followup-input"
               style={{
                 flex: 1, padding: "12px 16px", borderRadius: "12px",
                 border: "1.5px solid #E5E7EB", fontSize: "14px",
                 color: "#111827", outline: "none", fontFamily: "Inter, sans-serif"
               }}
             />
-            <button onClick={handleFollowUp}
+            {renderMic("followup", (text) => { setFollowUp(text); handleFollowUp(text) }, "voice-input-btn")}
+            <button onClick={() => handleFollowUp()}
               disabled={!followUp.trim() || followUpLoading}
+              data-testid="followup-ask-btn"
               style={{
                 padding: "12px 20px", borderRadius: "12px", border: "none",
                 background: "#7C3AED", color: "white", fontWeight: 600,
@@ -540,12 +661,15 @@ export default function TopicView({ topic, module: mod, course, level, onComplet
 
           {/* Answer area */}
           <div style={{ marginBottom: "16px" }}>
-            <label style={{ fontSize: "13px", fontWeight: 600, color: "#374151",
-              display: "block", marginBottom: "8px" }}>
-              Your answer:
-            </label>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
+              <label style={{ fontSize: "13px", fontWeight: 600, color: "#374151" }}>
+                Your answer:
+              </label>
+              {renderMic("practice", (text) => setPracticeAnswer(prev => (prev ? prev + " " : "") + text), "voice-answer-btn-practice")}
+            </div>
+            {renderVoiceStatus("practice")}
             <textarea
-              placeholder="Write your answer or code here..."
+              placeholder="Write, speak, or code your answer here..."
               value={practiceAnswer}
               onChange={e => setPracticeAnswer(e.target.value)}
               rows={6}
@@ -742,31 +866,43 @@ export default function TopicView({ topic, module: mod, course, level, onComplet
               )}
 
               {q.type === "fill_blank" && (
-                <input type="text"
-                  placeholder="Type your answer..."
-                  value={answers[q.id] || ""}
-                  onChange={e => setAnswers({ ...answers, [q.id]: e.target.value })}
-                  style={{
-                    width: "100%", padding: "12px 16px", borderRadius: "10px",
-                    border: "1.5px solid #E5E7EB", fontSize: "14px",
-                    color: "#111827", outline: "none", fontFamily: "Inter, sans-serif"
-                  }}
-                />
+                <div>
+                  {renderVoiceStatus(`quiz-${q.id}`)}
+                  <div style={{ display: "flex", gap: "8px" }}>
+                    <input type="text"
+                      placeholder="Type or speak your answer..."
+                      value={answers[q.id] || ""}
+                      onChange={e => setAnswers({ ...answers, [q.id]: e.target.value })}
+                      style={{
+                        flex: 1, padding: "12px 16px", borderRadius: "10px",
+                        border: "1.5px solid #E5E7EB", fontSize: "14px",
+                        color: "#111827", outline: "none", fontFamily: "Inter, sans-serif"
+                      }}
+                    />
+                    {renderMic(`quiz-${q.id}`, (text) => setAnswers(a => ({ ...a, [q.id]: (a[q.id] ? a[q.id] + " " : "") + text })), `voice-answer-btn-${q.id}`)}
+                  </div>
+                </div>
               )}
 
               {q.type === "open_ended" && (
-                <textarea
-                  placeholder="Write your answer here..."
-                  value={answers[q.id] || ""}
-                  onChange={e => setAnswers({ ...answers, [q.id]: e.target.value })}
-                  rows={3}
-                  style={{
-                    width: "100%", padding: "12px 16px", borderRadius: "10px",
-                    border: "1.5px solid #E5E7EB", fontSize: "14px",
-                    color: "#111827", outline: "none", fontFamily: "Inter, sans-serif",
-                    resize: "vertical"
-                  }}
-                />
+                <div>
+                  <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "6px" }}>
+                    {renderMic(`quiz-${q.id}`, (text) => setAnswers(a => ({ ...a, [q.id]: (a[q.id] ? a[q.id] + " " : "") + text })), `voice-answer-btn-${q.id}`)}
+                  </div>
+                  {renderVoiceStatus(`quiz-${q.id}`)}
+                  <textarea
+                    placeholder="Write or speak your answer here..."
+                    value={answers[q.id] || ""}
+                    onChange={e => setAnswers({ ...answers, [q.id]: e.target.value })}
+                    rows={3}
+                    style={{
+                      width: "100%", padding: "12px 16px", borderRadius: "10px",
+                      border: "1.5px solid #E5E7EB", fontSize: "14px",
+                      color: "#111827", outline: "none", fontFamily: "Inter, sans-serif",
+                      resize: "vertical"
+                    }}
+                  />
+                </div>
               )}
             </div>
           ))}
