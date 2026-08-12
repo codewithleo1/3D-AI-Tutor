@@ -23,8 +23,8 @@
 
 ## Current Status
 
-Last worked on: July 26, 2026
-Next session goal: Test avatar on live Vercel deployment, wire mood changes dynamically
+Last worked on: August 12, 2026
+Next session goal: Voice input (Groq Whisper mic button in TopicView)
 
 ---
 
@@ -219,8 +219,13 @@ CSS classes defined: `section-card`, `btn-primary`, `btn-success`, `option-btn`,
 - [x] Mood mapping: teaching→explaining, quiz→quiz, pass→happy, fail→concerned
 - [x] Avatar head nod lipsync while isSpeaking (useFrame sine wave on Head_5)
 - [x] Body bones locked to rest position (useFrame override)
-- [ ] Push nova.glb to work on Vercel (currently only works locally)
-- [ ] Test all mood transitions on live site
+- [x] Replaced nova.glb with RPM avatar (rpm_test.glb) + 5 separate animation GLBs
+- [x] Fixed Intel UHD WebGL context loss — separate GLBs bypass the merged mesh limit
+- [x] Morph targets: 63 blend shapes — mood expressions + 15 visemes + eye blink
+- [x] Lip sync via viseme cycling on word boundaries (useSpeech onboundary event)
+- [x] poseSeed prop varies talking animation per topic
+- [x] debugAvatar mode in main.jsx (?debugAvatar URL param for isolated testing)
+- [x] Avatar live on Vercel — verified rendering on production
 
 ---
 
@@ -302,6 +307,8 @@ CSS classes defined: `section-card`, `btn-primary`, `btn-success`, `option-btn`,
 | 18 | LLM returns malformed JSON on follow-ups | Call clean_json() in teach_topic(), not just generate_practice() |
 | 19 | Follow-up history sends full JSON blob | Send teaching.explanation || teaching.answer as assistant history content |
 | 20 | TTS speaks wrong voice after refactor | Add female-specific voice names to preferred list in useSpeech.js |
+| 21 | Avatar.jsx copy-paste from chat left old nova.glb reference | Use Invoke-WebRequest to pull file directly from GitHub — never copy-paste GLB-dependent code |
+| 22 | useMemo with clipGltfs.map() as deps array causes constant re-evaluation | Use eslint-disable-next-line comment with empty [] deps array for stable clip list |
 ---
 
 ## Coding Rules (Follow Every Session)
@@ -331,3 +338,4 @@ CSS classes defined: `section-card`, `btn-primary`, `btn-success`, `option-btn`,
 | July 24, 2026 | Neon DB schema migration, backend route fixes, frontend DB wiring, progress syncs end-to-end | b335840, 7e75bed |
 | July 26, 2026 | Neon DB wiring complete, cross-device restore, conversation UI, understanding gate, deployed to Vercel + Render, 3D avatar built with Three.js + React Three Fiber | multiple commits |
 | July 29, 2026 | TTS with Web Speech API, lipsync head nod, body bone locking, follow-up fix, teaching_agent clean_json fix | multiple commits |
+| Aug 12, 2026 | RPM avatar merged to main — separate GLBs, morph targets, lip sync, mood expressions, poseSeed, debugAvatar mode. Fixed Intel UHD WebGL issue. Verified live on Vercel. | 6e6dbae |
