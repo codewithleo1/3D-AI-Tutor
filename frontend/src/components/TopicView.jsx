@@ -5,7 +5,7 @@ import Editor from "@monaco-editor/react"
 
 const API = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000/api"
 
-export default function TopicView({ topic, module: mod, course, level, onComplete, onSkip, onMoodChange, speak, stop, isSpeaking }) {
+export default function TopicView({ topic, module: mod, course, level, onComplete, onSkip, onMoodChange, speak, stop, isSpeaking, isRecording, startRecording, stopRecording }) {
   const [teaching, setTeaching] = useState(null)
   const [history, setHistory] = useState([])
   const [followUp, setFollowUp] = useState("")
@@ -469,6 +469,70 @@ export default function TopicView({ topic, module: mod, course, level, onComplet
                 color: "#111827", outline: "none", fontFamily: "Inter, sans-serif"
               }}
             />
+
+            {/* Mic button */}
+            <button
+              onMouseDown={startRecording}
+              onMouseUp={async () => {
+                const blob = await stopRecording()
+                if (!blob) return
+                const formData = new FormData()
+                formData.append("audio", blob, "audio.webm")
+                try {
+                  const res = await fetch(`${API}/transcribe`, { method: "POST", body: formData })
+                  const data = await res.json()
+                  if (data.transcript) {
+                    setFollowUp(data.transcript)
+                    // auto-submit
+                    setTimeout(() => {
+                      const newHistory = [
+                        ...history,
+                        { role: "assistant", content: teaching?.explanation || teaching?.answer || "" },
+                        { role: "user", content: data.transcript },
+                      ]
+                      setHistory(newHistory)
+                      setFollowUp("")
+                      setFollowUpLoading(true)
+                      axios.post(`${API}/teach`, {
+                        topic_title: topic.title,
+                        topic_description: topic.description || "",
+                        module_title: mod.title,
+                        course_title: course.title,
+                        conversation_history: newHistory,
+                      }).then(res => {
+                        const d = res.data.response
+                        if (d.type === "ready_for_quiz") {
+                          loadPractice()
+                        } else {
+                          setTeaching(d)
+                          setMessages(prev => [
+                            ...prev,
+                            { role: "user", text: data.transcript },
+                            { role: "nova", data: d }
+                          ])
+                          setExchangeCount(prev => prev + 1)
+                        }
+                      }).catch(() => {
+                        setError("Something went wrong. Please try again.")
+                      }).finally(() => {
+                        setFollowUpLoading(false)
+                      })
+                    }, 100)
+                  }
+                } catch {
+                  // silently fail — user can type instead
+                }
+              }}
+              title="Hold to speak"
+              style={{
+                padding: "12px 16px", borderRadius: "12px", border: "none",
+                background: isRecording ? "#EF4444" : "#F3F4F6",
+                color: isRecording ? "white" : "#6B7280",
+                cursor: "pointer", fontSize: "18px",
+                transition: "all 0.15s"
+              }}>
+              🎤
+            </button>
             <button onClick={handleFollowUp}
               disabled={!followUp.trim() || followUpLoading}
               style={{
