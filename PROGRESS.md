@@ -24,7 +24,7 @@
 ## Current Status
 
 Last worked on: August 12, 2026
-Next session goal: Voice input (Groq Whisper mic button in TopicView)
+Next session goal: Phase B voice loop — auto-listen after Nova speaks (silence detection + echo suppression)
 
 ---
 
@@ -231,7 +231,7 @@ CSS classes defined: `section-card`, `btn-primary`, `btn-success`, `option-btn`,
 
 ## Phase 4 — Voice + Polish + Deploy 🔒 NOT STARTED
 
-- [ ] Groq Whisper voice input
+- [x] Groq Whisper voice input — POST /api/transcribe, mic toggle button, auto-submit on transcription
 - [ ] Spaced repetition reminders (7-day review badge in sidebar)
 - [ ] Export progress as PDF
 - [ ] Mobile sidebar — hamburger menu, slide-in drawer
@@ -339,3 +339,4 @@ CSS classes defined: `section-card`, `btn-primary`, `btn-success`, `option-btn`,
 | July 26, 2026 | Neon DB wiring complete, cross-device restore, conversation UI, understanding gate, deployed to Vercel + Render, 3D avatar built with Three.js + React Three Fiber | multiple commits |
 | July 29, 2026 | TTS with Web Speech API, lipsync head nod, body bone locking, follow-up fix, teaching_agent clean_json fix | multiple commits |
 | Aug 12, 2026 | RPM avatar merged to main — separate GLBs, morph targets, lip sync, mood expressions, poseSeed, debugAvatar mode. Fixed Intel UHD WebGL issue. Verified live on Vercel. | 6e6dbae |
+| Aug 12, 2026 | Voice input complete — Groq Whisper /api/transcribe endpoint, mic toggle in TopicView, auto-submit after transcription. Full loop: speak → transcribe → Nova responds + speaks. | ce7cfe0 |
