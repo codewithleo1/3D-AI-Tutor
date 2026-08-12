@@ -362,7 +362,11 @@ export default function TopicView({ topic, module: mod, course, level, onComplet
                     </div>
                     <div style={{ color: "#374151", lineHeight: 1.8, fontSize: "15px" }}>
                       {(msg.data.explanation || msg.data.answer || "").split("\n\n").map((para, i) => (
-                        <p key={i} style={{ marginBottom: "14px" }}>{para}</p>
+                        <p key={i} style={{ marginBottom: "14px" }}
+                          dangerouslySetInnerHTML={{
+                            __html: para.replace(/_(.*?)_/g, "<em>$1</em>")
+                          }}
+                        />
                       ))}
                     </div>
                   </div>
@@ -441,19 +445,55 @@ export default function TopicView({ topic, module: mod, course, level, onComplet
             <p style={{ color: "#EF4444", marginBottom: "16px" }}>{error}</p>
           )}
 
-          {/* Explain differently */}
-          <button
-            onClick={handleExplainDifferently}
-            disabled={followUpLoading}
-            style={{
-              display: "flex", alignItems: "center", gap: "8px",
-              padding: "10px 18px", borderRadius: "10px", fontWeight: 600,
-              fontSize: "13px", background: "#EDE9FE", color: "#6D28D9",
-              border: "1.5px solid #C4B5FD", cursor: "pointer",
-              marginBottom: "12px", opacity: followUpLoading ? 0.5 : 1
-            }}>
-            🔄 Explain differently
-          </button>
+          {/* Understanding check */}
+          <div style={{
+            background: "#F0FDF4", border: "1.5px solid #BBF7D0",
+            borderRadius: "14px", padding: "16px", marginBottom: "16px"
+          }}>
+            <p style={{ fontSize: "14px", color: "#166534", fontWeight: 600, marginBottom: "10px" }}>
+              👩‍🏫 Did you follow that?
+            </p>
+            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+              <button
+                onClick={() => {
+                  setFollowUp("Yes, I understand! What should I know next about this topic?")
+                  handleFollowUp()
+                }}
+                disabled={followUpLoading}
+                style={{
+                  padding: "8px 16px", borderRadius: "10px", fontWeight: 600,
+                  fontSize: "13px", background: "#10B981", color: "white",
+                  border: "none", cursor: "pointer", opacity: followUpLoading ? 0.5 : 1
+                }}>
+                ✅ Yes, I got it!
+              </button>
+              <button
+                onClick={handleExplainDifferently}
+                disabled={followUpLoading}
+                style={{
+                  padding: "8px 16px", borderRadius: "10px", fontWeight: 600,
+                  fontSize: "13px", background: "#EDE9FE", color: "#6D28D9",
+                  border: "1.5px solid #C4B5FD", cursor: "pointer",
+                  opacity: followUpLoading ? 0.5 : 1
+                }}>
+                🔄 Explain differently
+              </button>
+              <button
+                onClick={() => {
+                  setFollowUp("What are the most important things I should know about this topic before moving on?")
+                  handleFollowUp()
+                }}
+                disabled={followUpLoading}
+                style={{
+                  padding: "8px 16px", borderRadius: "10px", fontWeight: 600,
+                  fontSize: "13px", background: "#F3F4F6", color: "#374151",
+                  border: "1.5px solid #E5E7EB", cursor: "pointer",
+                  opacity: followUpLoading ? 0.5 : 1
+                }}>
+                💡 What else should I know?
+              </button>
+            </div>
+          </div>
 
           {/* Follow up */}
           <div style={{ display: "flex", gap: "10px", marginBottom: "16px" }}>

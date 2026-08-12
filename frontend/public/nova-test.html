@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Nova Test</title>
+  <style>
+    body { margin: 0; background: #1a1a2e; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif; color: white; }
+    #canvas-container { width: 400px; height: 600px; border: 2px solid #7C3AED; border-radius: 16px; overflow: hidden; }
+    canvas { width: 100% !important; height: 100% !important; }
+    .controls { margin-top: 20px; display: flex; gap: 12px; }
+    button { padding: 12px 24px; border-radius: 10px; border: none; background: #7C3AED; color: white; font-size: 16px; cursor: pointer; font-weight: 600; }
+    button:hover { background: #6D28D9; }
+    #status { margin-top: 12px; font-size: 14px; color: #9CA3AF; }
+  </style>
+</head>
+<body>
+  <h2 style="margin-bottom: 16px;">🧪 Nova Avatar Test</h2>
+  <div id="canvas-container"></div>
+  <div class="controls">
+    <button onclick="testSpeak()">🔊 Speak</button>
+    <button onclick="testAnimation('Idle')">🧍 Idle</button>
+    <button onclick="testAnimation('Talking')">🗣️ Talk</button>
+    <button onclick="testAnimation('Happy')">😊 Happy</button>
+  </div>
+  <div id="status">Loading...</div>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.152.2/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.152.2/examples/jsm/"
+      }
+    }
+  </script>
+
+  <script type="module">
+    import * as THREE from 'three'
+    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
+
+    const status = document.getElementById('status')
+    const container = document.getElementById('canvas-container')
+
+    // Scene setup
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
+    renderer.setSize(400, 600)
+    renderer.setPixelRatio(window.devicePixelRatio)
+    container.appendChild(renderer.domElement)
+
+    const scene = new THREE.Scene()
+    const camera = new THREE.PerspectiveCamera(60, 400/600, 0.1, 100)
+    camera.position.set(0, 0, 3)
+
+    // Lights
+    scene.add(new THREE.AmbientLight(0xffffff, 1.2))
+    const dirLight = new THREE.DirectionalLight(0xffffff, 1.2)
+    dirLight.position.set(0, 4, 4)
+    scene.add(dirLight)
+
+    // Load GLB
+    const loader = new GLTFLoader()
+    let mixer = null
+    let actions = {}
+    let morphMeshes = []
+    let currentAction = null
+
+    status.textContent = 'Loading nova.glb...'
+
+    loader.load('/nova.glb', (gltf) => {
+      const model = gltf.scene
+      model.position.set(0, -0.9, 0)
+      model.scale.set(1, 1, 1)
+
+      model.traverse(obj => {
+        if (obj.isMesh) {
+          obj.frustumCulled = false
+          if (obj.material) {
+            obj.material.side = THREE.DoubleSide
+            obj.material.needsUpdate = true
+          }
+          if (obj.morphTargetDictionary && obj.morphTargetInfluences) {
+            morphMeshes.push(obj)
+            console.log('Morph mesh:', obj.name, Object.keys(obj.morphTargetDictionary))
+          }
+        }
+      })
+
+      scene.add(model)
+
+      mixer = new THREE.AnimationMixer(model)
+      gltf.animations.forEach(clip => {
+        const action = mixer.clipAction(clip)
+        actions[clip.name] = action
+        console.log('Animation:', clip.name)
+      })
+
+      if (actions['Idle']) {
+        actions['Idle'].play()
+        currentAction = actions['Idle']
+      } else if (gltf.animations.length > 0) {
+        const first = mixer.clipAction(gltf.animations[0])
+        first.play()
+        currentAction = first
+      }
+
+      status.textContent = `✅ Loaded! Animations: ${Object.keys(actions).join(', ')} | Morph meshes: ${morphMeshes.length}`
+    },
+    (progress) => {
+      const pct = Math.round(progress.loaded / progress.total * 100)
+      status.textContent = `Loading... ${pct}%`
+    },
+    (error) => {
+      status.textContent = '❌ Error: ' + error.message
+      console.error(error)
+    })
+
+    const clock = new THREE.Clock()
+    function animate() {
+      requestAnimationFrame(animate)
+      const delta = clock.getDelta()
+      if (mixer) mixer.update(delta)
+      renderer.render(scene, camera)
+    }
+    animate()
+
+    window.testAnimation = function(name) {
+      if (!actions[name]) { status.textContent = `❌ No animation: ${name}`; return }
+      if (currentAction) currentAction.fadeOut(0.3)
+      actions[name].reset().fadeIn(0.3).play()
+      currentAction = actions[name]
+      status.textContent = `▶ Playing: ${name}`
+    }
+
+    window.testSpeak = function() {
+      const synth = window.speechSynthesis
+      const text = "Hello! I am Miss Nova, your AI tutor. I will help you learn anything you want!"
+      const utterance = new SpeechSynthesisUtterance(text)
+      const voices = synth.getVoices()
+      const voice = voices.find(v => v.name === 'Google UK English Female') || voices.find(v => v.lang.startsWith('en'))
+      if (voice) utterance.voice = voice
+
+      let visemeInterval = null
+      utterance.onstart = () => {
+        status.textContent = '🔊 Speaking...'
+        let v = 1
+        visemeInterval = setInterval(() => {
+          applyViseme(v)
+          v = (v % 14) + 1
+        }, 120)
+      }
+      utterance.onend = () => {
+        status.textContent = '✅ Done speaking'
+        clearInterval(visemeInterval)
+        applyViseme(0)
+      }
+      synth.cancel()
+      synth.speak(utterance)
+    }
+
+    function applyViseme(idx) {
+      const VISEME_MAP = {
+        0: 'viseme_sil', 1: 'viseme_PP', 2: 'viseme_FF',
+        3: 'viseme_TH', 4: 'viseme_DD', 5: 'viseme_kk',
+        6: 'viseme_CH', 7: 'viseme_SS', 8: 'viseme_nn',
+        9: 'viseme_RR', 10: 'viseme_aa', 11: 'viseme_E',
+        12: 'viseme_I', 13: 'viseme_O', 14: 'viseme_U',
+      }
+      const name = VISEME_MAP[idx] || 'viseme_sil'
+      morphMeshes.forEach(mesh => {
+        const dict = mesh.morphTargetDictionary
+        const inf = mesh.morphTargetInfluences
+        Object.values(VISEME_MAP).forEach(v => {
+          const i = dict[v]; if (i !== undefined) inf[i] *= 0.5
+        })
+        const i = dict[name]; if (i !== undefined) inf[i] = 1.0
+        const jaw = dict['jawOpen']; if (jaw !== undefined) inf[jaw] = idx === 0 ? 0 : 0.3
+      })
+    }
+  </script>
+</body>
+</html>
