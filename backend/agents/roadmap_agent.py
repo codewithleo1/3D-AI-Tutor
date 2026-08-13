@@ -22,6 +22,16 @@ TOPIC RULES — READ CAREFULLY:
 - Topics must build on each other — each one assumes the previous is mastered.
 - If a subject area has many sub-concepts, create more topics, not broader ones.
 
+SUBTOPIC RULES:
+- Every topic must have 3-6 subtopics depending on complexity.
+- Subtopics are the specific things Nova will teach one by one inside the topic.
+- Each subtopic is a short phrase (5-10 words) describing ONE teachable idea.
+- Simple topics (Variables, Loops): 3-4 subtopics
+- Medium topics (Functions, Arrays): 4-5 subtopics  
+- Complex topics (Neural Networks, Async): 5-6 subtopics
+- Subtopics must be ordered — each builds on the previous one.
+- Last subtopic should always be practical application or common mistake.
+
 STRUCTURE RULES:
 - Generate 3-6 modules. Each module has 3-6 topics.
 - Order modules from foundational to advanced.
@@ -44,7 +54,12 @@ Output format:
           "id": 1,
           "title": "Topic title — ONE concept only",
           "description": "One sentence on exactly what will be taught.",
-          "estimated_minutes": 25
+          "estimated_minutes": 25,
+          "subtopics": [
+            "Subtopic 1 — first thing to understand",
+            "Subtopic 2 — second concept that builds on first",
+            "Subtopic 3 — application or common mistake"
+          ]
         }
       ]
     }
@@ -82,7 +97,13 @@ Example output:
           "id": 2,
           "title": "Variables",
           "description": "Learn how to store values in named containers and use them in code.",
-          "estimated_minutes": 25
+          "estimated_minutes": 25,
+          "subtopics": [
+            "What is a variable and why we need it",
+            "Creating and naming variables in Python",
+            "Updating and reusing variable values",
+            "Common variable mistakes beginners make"
+          ]
         },
         {
           "id": 3,
@@ -155,7 +176,7 @@ Now generate a roadmap for:
   "objective": "{objective}"
 }}
 
-Remember: Each topic must cover EXACTLY ONE concept. Never combine concepts.
+Remember: Each topic must cover EXACTLY ONE concept. Never combine concepts. Every topic must include a subtopics array with 3-6 items.
 """
 
     response = client.chat.completions.create(
