@@ -13,6 +13,10 @@ class TeachRequest(BaseModel):
     module_title: str
     course_title: str
     conversation_history: list = []
+    current_subtopic: str = ""
+    subtopic_index: int = 0
+    total_subtopics: int = 1
+    roadmap_outline: list = []
 
 class QuizGenerateRequest(BaseModel):
     topic_title: str
@@ -49,6 +53,10 @@ def teach(request: TeachRequest):
             module_title=request.module_title,
             course_title=request.course_title,
             conversation_history=request.conversation_history,
+            current_subtopic=request.current_subtopic,
+            subtopic_index=request.subtopic_index,
+            total_subtopics=request.total_subtopics,
+            roadmap_outline=request.roadmap_outline,
         )
         return {"success": True, "response": result}
     except Exception as e:
