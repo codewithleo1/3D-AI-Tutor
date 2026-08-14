@@ -229,14 +229,20 @@ CSS classes defined: `section-card`, `btn-primary`, `btn-success`, `option-btn`,
 
 ---
 
-## Phase 4 — Voice + Polish + Deploy 🔒 NOT STARTED
+## Phase 4 — Voice + Polish + Deploy 🔄 IN PROGRESS
 
-- [x] Groq Whisper voice input — POST /api/transcribe, mic toggle button, auto-submit on transcription
+- [x] Groq Whisper voice input — mic toggle, auto-submit after transcription
+- [x] Teaching prompt rewritten — chunked Socratic teaching, hook question, topic-type aware
+- [x] Practice prompt rewritten — progressive scaffolding
+- [x] Roadmap generates subtopics per topic (3-6 items, ordered)
+- [ ] Subtopic-aware teaching loop — Nova teaches one subtopic at a time
+- [ ] Dual Groq API key fallback
+- [ ] "Yes I got it" navigates subtopics, quiz only after all subtopics done
 - [ ] Spaced repetition reminders (7-day review badge in sidebar)
 - [ ] Export progress as PDF
 - [ ] Mobile sidebar — hamburger menu, slide-in drawer
-- [ ] Deploy frontend to Vercel
-- [ ] Deploy backend to Render
+- [x] Deploy frontend to Vercel — https://3-d-ai-tutor.vercel.app
+- [x] Deploy backend to Render — https://miss-nova-backend.onrender.com
 - [ ] README with demo GIF
 
 ---
@@ -309,6 +315,9 @@ CSS classes defined: `section-card`, `btn-primary`, `btn-success`, `option-btn`,
 | 20 | TTS speaks wrong voice after refactor | Add female-specific voice names to preferred list in useSpeech.js |
 | 21 | Avatar.jsx copy-paste from chat left old nova.glb reference | Use Invoke-WebRequest to pull file directly from GitHub — never copy-paste GLB-dependent code |
 | 22 | useMemo with clipGltfs.map() as deps array causes constant re-evaluation | Use eslint-disable-next-line comment with empty [] deps array for stable clip list |
+| 23 | Prompt rewrite caused 500 errors | Keep same JSON response structure — only change instructions, not field names |
+| 24 | TTS speaks underscores literally | Strip underscores before passing text to speak() |
+| 25 | git push fails with "Could not resolve host" | Temporary DNS issue — wait 30 seconds and retry |
 ---
 
 ## Coding Rules (Follow Every Session)
@@ -340,3 +349,4 @@ CSS classes defined: `section-card`, `btn-primary`, `btn-success`, `option-btn`,
 | July 29, 2026 | TTS with Web Speech API, lipsync head nod, body bone locking, follow-up fix, teaching_agent clean_json fix | multiple commits |
 | Aug 12, 2026 | RPM avatar merged to main — separate GLBs, morph targets, lip sync, mood expressions, poseSeed, debugAvatar mode. Fixed Intel UHD WebGL issue. Verified live on Vercel. | 6e6dbae |
 | Aug 12, 2026 | Voice input complete — Groq Whisper /api/transcribe endpoint, mic toggle in TopicView, auto-submit after transcription. Full loop: speak → transcribe → Nova responds + speaks. | ce7cfe0 |
+| Aug 13, 2026 | Teaching prompt rewritten (chunked, hook, no code dump). Practice prompt rewritten. Roadmap generates subtopics. Voice auto-submit. Italics fix. Subtopic architecture designed. | 36dce6c |
