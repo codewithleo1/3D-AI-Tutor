@@ -5,7 +5,11 @@ import { useCourseProgress } from "./hooks/useCourseProgress"
 import Sidebar from "./components/Sidebar"
 import Prerequisites from "./components/Prerequisites"
 import Avatar from "./components/Avatar"
+import { supabase } from "./lib/supabase"
+import AuthPage from "./pages/AuthPage"
+import PaymentGate from "./pages/PaymentGate"
 import { useSpeech } from "./hooks/useSpeech"
+
 
 const API = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000/api"
 
@@ -49,6 +53,19 @@ function SectionHeader({ number, title, completed, summary }) {
 }
 
 export default function App() {
+  const [user, setUser] = useState(null)
+  const [authLoading, setAuthLoading] = useState(true)
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null)
+      setAuthLoading(false)
+    })
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null)
+    })
+    return () => subscription.unsubscribe()
+  }, [])
   const [goal, setGoal] = useState("")
   const [level, setLevel] = useState("")
   const [hours, setHours] = useState(5)
@@ -60,6 +77,9 @@ export default function App() {
   const [openSection, setOpenSection] = useState(1)
   const [showPrereqs, setShowPrereqs] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [courseUnlocked, setCourseUnlocked] = useState(false)
+  const [showPaymentGate, setShowPaymentGate] = useState(false)
+  
   
 
 // Teaching mode state
@@ -68,6 +88,7 @@ export default function App() {
   const [currentTopicIdx, setCurrentTopicIdx] = useState(0)
   const [avatarMood, setAvatarMood] = useState("idle")
   const { speak, stop, isSpeaking, currentViseme, isRecording, startRecording, stopRecording } = useSpeech()
+  
 
   const {
     progress,
@@ -160,15 +181,18 @@ export default function App() {
   function handleTopicComplete() {
     const mod = roadmap.modules[currentModuleIdx]
     const nextTopicIdx = currentTopicIdx + 1
-
-    // Save completion to localStorage
     markTopicComplete(currentModuleIdx, currentTopicIdx, roadmap)
-
     if (nextTopicIdx < mod.topics.length) {
       setCurrentTopicIdx(nextTopicIdx)
     } else {
       const nextModuleIdx = currentModuleIdx + 1
       if (nextModuleIdx < roadmap.modules.length) {
+        // Payment gate after module 1
+        if (nextModuleIdx === 1 && !courseUnlocked) {
+          setTeaching(false)
+          setShowPaymentGate(true)
+          return
+        }
         setCurrentModuleIdx(nextModuleIdx)
         setCurrentTopicIdx(0)
       } else {
@@ -195,6 +219,15 @@ export default function App() {
   
   
   // ─── PREREQUISITES SCREEN ────────────────────────────────────
+  if (authLoading) return (
+    <div style={{ display: "flex", alignItems: "center",
+      justifyContent: "center", height: "100vh" }}>
+      <div style={{ fontSize: "48px" }} className="animate-spin">⚙️</div>
+    </div>
+  )
+
+  if (!user) return <AuthPage onAuth={setUser} />
+  
   if (showPrereqs && roadmap && !teaching) {
     return (
       <div className="min-h-screen" style={{ background: "#FFFFFF" }}>
@@ -224,6 +257,23 @@ export default function App() {
     )
   }
 
+  // ─── PAYMENT GATEWAY ───────────────────────────────────────────
+  if (showPaymentGate && roadmap) {
+    return (
+      <PaymentGate
+        user={user}
+        courseTitle={roadmap.title}
+        onUnlock={() => {
+          setCourseUnlocked(true)
+          setShowPaymentGate(false)
+          setCurrentModuleIdx(1)
+          setCurrentTopicIdx(0)
+          setTeaching(true)
+        }}
+      />
+    )
+  }
+  
   // ─── TEACHING MODE ───────────────────────────────────────────
   if (teaching && roadmap) {
     const mod = roadmap.modules[currentModuleIdx]
@@ -338,10 +388,19 @@ export default function App() {
       <nav style={{ borderBottom: "1px solid #F3F4F6" }}
         className="flex items-center justify-between px-8 py-4 sticky top-0 bg-white z-10">
         <span className="text-2xl font-extrabold gradient-text">Miss Nova</span>
-        <span className="text-sm font-medium px-3 py-1.5 rounded-full"
-          style={{ background: "#F3F4F6", color: "#6B7280" }}>
-          AI Learning Companion
-        </span>
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <span className="text-sm font-medium px-3 py-1.5 rounded-full"
+            style={{ background: "#F3F4F6", color: "#6B7280" }}>
+            AI Learning Companion
+          </span>
+          <button onClick={() => supabase.auth.signOut()} style={{
+            fontSize: "14px", padding: "8px 16px", borderRadius: "10px",
+            background: "#F3F4F6", color: "#6B7280", border: "1.5px solid #E5E7EB",
+            cursor: "pointer", fontWeight: 600
+          }}>
+            Log out
+          </button>
+        </div>
       </nav>
 
       <div style={{ maxWidth: "780px", margin: "0 auto", padding: "48px 24px" }}>
