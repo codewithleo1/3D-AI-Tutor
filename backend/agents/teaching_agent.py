@@ -228,6 +228,7 @@ def teach_topic(
     subtopic_index: int = 0,
     total_subtopics: int = 1,
     roadmap_outline: list = [],
+    all_subtopics: list = [],
 ) -> dict:
     """Call Groq LLaMA to teach a subtopic or answer a follow-up question."""
 
@@ -247,11 +248,23 @@ def teach_topic(
     # we just tell the model the index position clearly.
     position_note = ""
     if subtopic_index == 0:
-        position_note = "This is the FIRST subtopic — start with a hook question in italics."
+        position_note = "This is the FIRST subtopic — start with a hook question."
     elif subtopic_index == total_subtopics - 1:
-        position_note = "This is the LAST subtopic — connect back to what was learned, then wrap up."
+        covered = ", ".join(all_subtopics[:subtopic_index]) if all_subtopics else f"the first {subtopic_index} subtopics"
+        position_note = f"LAST subtopic. Already covered: {covered}. Do NOT repeat them. Wrap up."
     else:
-        position_note = f"Subtopics 1–{subtopic_index} are already covered. Do NOT repeat them."
+        covered = ", ".join(all_subtopics[:subtopic_index]) if all_subtopics else f"the first {subtopic_index} subtopics"
+        position_note = f"Already covered: {covered}. Teach ONLY '{current_subtopic}' — nothing else."
+
+    # Build explicit list of what's done and what's next
+    if all_subtopics and len(all_subtopics) > 1:
+        done = all_subtopics[:subtopic_index]
+        upcoming = all_subtopics[subtopic_index + 1:]
+        done_str = f"ALREADY TAUGHT (do NOT repeat): {', '.join(done)}" if done else "Nothing taught yet — this is the first subtopic."
+        next_str = f"COMING LATER (do NOT jump ahead): {', '.join(upcoming)}" if upcoming else "This is the final subtopic."
+    else:
+        done_str = ""
+        next_str = ""
 
     context = f"""
 Course: {course_title}
@@ -262,7 +275,10 @@ Topic description: {topic_description}
 {subtopic_line}
 {position_note}
 
-Full course outline (for orientation only — stay on current subtopic):
+{done_str}
+{next_str}
+
+Full course outline (for orientation only):
 {roadmap_summary}
 """.strip()
 
