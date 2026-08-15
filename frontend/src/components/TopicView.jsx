@@ -98,6 +98,7 @@ export default function TopicView({
         subtopic_index: subtopicIdx,
         total_subtopics: totalSubtopics,
         roadmap_outline: roadmapOutline,
+        all_subtopics: subtopics,
       })
       const data = res.data.response
       setTeaching(data)
@@ -143,6 +144,7 @@ export default function TopicView({
         subtopic_index: currentSubtopicIdx,
         total_subtopics: totalSubtopics,
         roadmap_outline: roadmapOutline,
+        all_subtopics: subtopics,
       })
       const data = res.data.response
       setTeaching(data)
@@ -180,6 +182,7 @@ export default function TopicView({
         subtopic_index: currentSubtopicIdx,
         total_subtopics: totalSubtopics,
         roadmap_outline: roadmapOutline,
+        all_subtopics: subtopics,
       })
       const data = res.data.response
       setTeaching(data)

@@ -17,11 +17,11 @@ class TeachRequest(BaseModel):
     subtopic_index: int = 0
     total_subtopics: int = 1
     roadmap_outline: list = []
+    all_subtopics: list = []
 
 class QuizGenerateRequest(BaseModel):
     topic_title: str
     topic_description: str
-
 
 class QuizEvaluateRequest(BaseModel):
     topic_title: str
@@ -43,6 +43,27 @@ class RepairRequest(BaseModel):
     topic_title: str
     failed_concepts: list
 
+class SaveCourseRequest(BaseModel):
+    goal: str
+    level: str
+    roadmap: dict
+
+class SaveProgressRequest(BaseModel):
+    session_id: str
+    course_id: str
+    completed_topics: list
+    current_module: int
+    current_topic: int
+
+class LoadProgressRequest(BaseModel):
+    session_id: str
+
+class PracticeEvaluateRequest(BaseModel):
+    topic_title: str
+    exercise: str
+    expected_output: str
+    student_answer: str
+
 
 @router.post("/teach")
 def teach(request: TeachRequest):
@@ -57,6 +78,7 @@ def teach(request: TeachRequest):
             subtopic_index=request.subtopic_index,
             total_subtopics=request.total_subtopics,
             roadmap_outline=request.roadmap_outline,
+            all_subtopics=request.all_subtopics,
         )
         return {"success": True, "response": result}
     except Exception as e:
@@ -127,24 +149,6 @@ def repair(request: RepairRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-class SaveCourseRequest(BaseModel):
-    goal: str
-    level: str
-    roadmap: dict
-
-
-class SaveProgressRequest(BaseModel):
-    session_id: str
-    course_id: str
-    completed_topics: list
-    current_module: int
-    current_topic: int
-
-
-class LoadProgressRequest(BaseModel):
-    session_id: str
-
-
 @router.post("/progress/save-course")
 def save_course_route(request: SaveCourseRequest):
     try:
@@ -185,12 +189,6 @@ def load_progress_route(request: LoadProgressRequest):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
-class PracticeEvaluateRequest(BaseModel):
-    topic_title: str
-    exercise: str
-    expected_output: str
-    student_answer: str
 
 
 @router.post("/practice/evaluate")
