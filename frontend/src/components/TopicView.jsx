@@ -2,12 +2,36 @@ import { useState, useEffect } from "react"
 import axios from "axios"
 import Editor from "@monaco-editor/react"
 
-
 const API = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000/api"
 
-export default function TopicView({ topic, module: mod, course, level, onComplete, onSkip, onMoodChange, speak, stop, isSpeaking, isRecording, startRecording, stopRecording }) {
+function buildRoadmapOutline(course) {
+  if (!course?.modules) return []
+  return course.modules.map(mod => ({
+    module: mod.title,
+    topics: mod.topics.map(t => t.title),
+  }))
+}
+
+function renderExplanation(text) {
+  if (!text) return null
+  return text.split("\n\n").map((para, i) => (
+    <p key={i} style={{ marginBottom: "14px" }}>
+      {para.replace(/_/g, "")}
+    </p>
+  ))
+}
+
+export default function TopicView({
+  topic, module: mod, course, level,
+  onComplete, onSkip, onMoodChange, speak, stop, isSpeaking
+}) {
+  const subtopics = topic.subtopics || [topic.title]
+  const totalSubtopics = subtopics.length
+
+  const [currentSubtopicIdx, setCurrentSubtopicIdx] = useState(0)
+  const [subtopicHistory, setSubtopicHistory] = useState([])
   const [teaching, setTeaching] = useState(null)
-  const [history, setHistory] = useState([])
+  const [messages, setMessages] = useState([])
   const [followUp, setFollowUp] = useState("")
   const [followUpLoading, setFollowUpLoading] = useState(false)
   const [practice, setPractice] = useState(null)
@@ -21,26 +45,28 @@ export default function TopicView({ topic, module: mod, course, level, onComplet
   const [results, setResults] = useState(null)
   const [error, setError] = useState("")
   const [repair, setRepair] = useState(null)
-  const [repairLoading, setRepairLoading] = useState(false)
   const [practiceEval, setPracticeEval] = useState(null)
   const [practiceEvalLoading, setPracticeEvalLoading] = useState(false)
-  const [messages, setMessages] = useState([])
-  const [exchangeCount, setExchangeCount] = useState(0)
   const [phase, setPhase] = useState("loading")
-  // speak, stop, isSpeaking come from App.jsx via props
 
+  // Reset everything when topic changes
   useEffect(() => {
+    setCurrentSubtopicIdx(0)
+    setSubtopicHistory([])
+    setMessages([])
     setPracticeEval(null)
-    loadTeaching([])
+    loadTeaching(0, [])
   }, [topic.id])
 
+ // Speak when new teaching arrives
   useEffect(() => {
-    const text = teaching?.explanation || teaching?.answer || ""
+    const text = (teaching?.explanation || teaching?.answer || "").replace(/_/g, "")
     if (!text) return
     const timer = setTimeout(() => speak(text), 100)
     return () => clearTimeout(timer)
   }, [teaching])
 
+  // Avatar mood
   useEffect(() => {
     if (!onMoodChange) return
     if (phase === "loading") onMoodChange("thinking")
@@ -53,30 +79,35 @@ export default function TopicView({ topic, module: mod, course, level, onComplet
     }
   }, [phase, results])
 
-  async function loadTeaching(conversationHistory) {
+  async function loadTeaching(subtopicIdx, history) {
     setPhase("loading")
     setError("")
-    setPractice(null)
-    setPracticeAnswer("")
-    setHintsShown(0)
-    setShowSolution(null)
+    setTeaching(null)
+
+    const currentSubtopic = subtopics[subtopicIdx] || topic.title
+    const roadmapOutline = buildRoadmapOutline(course)
+
     try {
       const res = await axios.post(`${API}/teach`, {
         topic_title: topic.title,
         topic_description: topic.description || "",
         module_title: mod.title,
         course_title: course.title,
-        conversation_history: conversationHistory,
+        conversation_history: history,
+        current_subtopic: currentSubtopic,
+        subtopic_index: subtopicIdx,
+        total_subtopics: totalSubtopics,
+        roadmap_outline: roadmapOutline,
       })
       const data = res.data.response
-      if (data.type === "ready_for_quiz") {
-        await loadPractice()
-      } else {
-        setTeaching(data)
+      setTeaching(data)
+      if (history.length === 0) {
+        // Fresh subtopic — start new message thread
         setMessages([{ role: "nova", data }])
-        setExchangeCount(0)
-        setPhase("teaching")
+      } else {
+        setMessages(prev => [...prev, { role: "nova", data }])
       }
+      setPhase("teaching")
     } catch {
       setError("Miss Nova had trouble loading this topic. Please try again.")
       setPhase("teaching")
@@ -86,13 +117,21 @@ export default function TopicView({ topic, module: mod, course, level, onComplet
   async function handleFollowUp() {
     if (!followUp.trim()) return
     setFollowUpLoading(true)
-    const newHistory = [
-      ...history,
-      { role: "assistant", content: teaching.explanation || teaching.answer || "" },
-      { role: "user", content: followUp },
-    ]
-    setHistory(newHistory)
+
+    const userText = followUp
     setFollowUp("")
+
+    const newHistory = [
+      ...subtopicHistory,
+      { role: "assistant", content: teaching?.explanation || teaching?.answer || "" },
+      { role: "user", content: userText },
+    ]
+    setSubtopicHistory(newHistory)
+    setMessages(prev => [...prev, { role: "user", text: userText }])
+
+    const currentSubtopic = subtopics[currentSubtopicIdx] || topic.title
+    const roadmapOutline = buildRoadmapOutline(course)
+
     try {
       const res = await axios.post(`${API}/teach`, {
         topic_title: topic.title,
@@ -100,19 +139,14 @@ export default function TopicView({ topic, module: mod, course, level, onComplet
         module_title: mod.title,
         course_title: course.title,
         conversation_history: newHistory,
+        current_subtopic: currentSubtopic,
+        subtopic_index: currentSubtopicIdx,
+        total_subtopics: totalSubtopics,
+        roadmap_outline: roadmapOutline,
       })
       const data = res.data.response
-      if (data.type === "ready_for_quiz") {
-        await loadPractice()
-      } else {
-        setTeaching(data)
-        setMessages(prev => [
-          ...prev,
-          { role: "user", text: followUp },
-          { role: "nova", data }
-        ])
-        setExchangeCount(prev => prev + 1)
-      }
+      setTeaching(data)
+      setMessages(prev => [...prev, { role: "nova", data }])
     } catch {
       setError("Something went wrong. Please try again.")
     } finally {
@@ -121,14 +155,20 @@ export default function TopicView({ topic, module: mod, course, level, onComplet
   }
 
   async function handleExplainDifferently() {
-    const message = "Can you explain this differently? Use a different analogy or approach."
     setFollowUpLoading(true)
+    const message = "Can you explain this differently? Use a different analogy or approach."
+
     const newHistory = [
-      ...history,
-      { role: "assistant", content: teaching.explanation || teaching.answer || "" },
+      ...subtopicHistory,
+      { role: "assistant", content: teaching?.explanation || teaching?.answer || "" },
       { role: "user", content: message },
     ]
-    setHistory(newHistory)
+    setSubtopicHistory(newHistory)
+    setMessages(prev => [...prev, { role: "user", text: "Can you explain this differently?" }])
+
+    const currentSubtopic = subtopics[currentSubtopicIdx] || topic.title
+    const roadmapOutline = buildRoadmapOutline(course)
+
     try {
       const res = await axios.post(`${API}/teach`, {
         topic_title: topic.title,
@@ -136,19 +176,14 @@ export default function TopicView({ topic, module: mod, course, level, onComplet
         module_title: mod.title,
         course_title: course.title,
         conversation_history: newHistory,
+        current_subtopic: currentSubtopic,
+        subtopic_index: currentSubtopicIdx,
+        total_subtopics: totalSubtopics,
+        roadmap_outline: roadmapOutline,
       })
       const data = res.data.response
-      if (data.type === "ready_for_quiz") {
-        await loadPractice()
-      } else {
-        setTeaching(data)
-        setMessages(prev => [
-          ...prev,
-          { role: "user", text: "Can you explain this differently?" },
-          { role: "nova", data }
-        ])
-  setExchangeCount(prev => prev + 1)
-}
+      setTeaching(data)
+      setMessages(prev => [...prev, { role: "nova", data }])
     } catch {
       setError("Something went wrong. Please try again.")
     } finally {
@@ -156,30 +191,42 @@ export default function TopicView({ topic, module: mod, course, level, onComplet
     }
   }
 
-    async function loadPractice() {
-      setPracticeLoading(true)
-      setPracticeEval(null)
-      setPhase("loading")
-      try {
-        const res = await axios.post(`${API}/practice`, {
-          topic_title: topic.title,
-          topic_description: topic.description || "",
-          module_title: mod.title,
-          course_title: course.title,
-          level: level || "beginner",
-        })
-        setPractice(res.data.practice)
-        setPracticeAnswer("")
-        setHintsShown(0)
-        setShowSolution(false)
-        setPhase("practice")
-      } catch {
-        // If practice fails, skip straight to quiz
-        await loadQuiz()
-      } finally {
-        setPracticeLoading(false)
-      }
+  function nextSubtopic() {
+    const nextIdx = currentSubtopicIdx + 1
+    if (nextIdx >= totalSubtopics) {
+      // All subtopics done — go to practice
+      loadPractice()
+    } else {
+      setCurrentSubtopicIdx(nextIdx)
+      setSubtopicHistory([])
+      setMessages([])
+      loadTeaching(nextIdx, [])
     }
+  }
+
+  async function loadPractice() {
+    setPracticeLoading(true)
+    setPracticeEval(null)
+    setPhase("loading")
+    try {
+      const res = await axios.post(`${API}/practice`, {
+        topic_title: topic.title,
+        topic_description: topic.description || "",
+        module_title: mod.title,
+        course_title: course.title,
+        level: level || "beginner",
+      })
+      setPractice(res.data.practice)
+      setPracticeAnswer("")
+      setHintsShown(0)
+      setShowSolution(false)
+      setPhase("practice")
+    } catch {
+      await loadQuiz()
+    } finally {
+      setPracticeLoading(false)
+    }
+  }
 
   async function submitPractice() {
     if (!practiceAnswer.trim()) return
@@ -237,10 +284,7 @@ export default function TopicView({ topic, module: mod, course, level, onComplet
   }
 
   async function loadRepair() {
-    console.log("loadRepair called, failed_concepts:", results?.failed_concepts)
-    setRepairLoading(true)
     setPhase("loading")
-    console.log("Calling repair with:", topic.title, results?.failed_concepts)
     try {
       const res = await axios.post(`${API}/repair`, {
         topic_title: topic.title,
@@ -249,15 +293,12 @@ export default function TopicView({ topic, module: mod, course, level, onComplet
       setRepair(res.data.repair)
       setPhase("repair")
     } catch (err) {
-      console.error("Repair error:", err)
       setPhase("result")
       setError("Couldn't load repair: " + err.message)
-    } finally {
-      setRepairLoading(false)
     }
   }
 
-  // Phase indicator dots
+  // Phase indicator
   const phases = ["teaching", "practice", "quiz", "result"]
   const phaseLabels = ["Learn", "Practice", "Quiz", "Result"]
   const displayPhase = phase === "repair" ? "result" : phase
@@ -281,12 +322,10 @@ export default function TopicView({ topic, module: mod, course, level, onComplet
 
       {/* Phase indicator */}
       {phase !== "loading" && (
-        <div style={{ display: "flex", alignItems: "center", gap: "0",
-          marginBottom: "32px" }}>
+        <div style={{ display: "flex", alignItems: "center", marginBottom: "24px" }}>
           {phases.map((p, i) => (
             <div key={p} style={{ display: "flex", alignItems: "center", flex: 1 }}>
-              <div style={{ display: "flex", flexDirection: "column",
-                alignItems: "center", flex: 1 }}>
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flex: 1 }}>
                 <div style={{
                   width: "28px", height: "28px", borderRadius: "50%",
                   display: "flex", alignItems: "center", justifyContent: "center",
@@ -318,6 +357,43 @@ export default function TopicView({ topic, module: mod, course, level, onComplet
         </div>
       )}
 
+      {/* Subtopic progress bar — only in teaching phase */}
+      {phase === "teaching" && totalSubtopics > 1 && (
+        <div style={{
+          background: "#F3F4F6", borderRadius: "12px",
+          padding: "12px 16px", marginBottom: "20px"
+        }}>
+          <div style={{ display: "flex", justifyContent: "space-between",
+            alignItems: "center", marginBottom: "8px" }}>
+            <span style={{ fontSize: "12px", fontWeight: 700, color: "#7C3AED" }}>
+              Subtopic {currentSubtopicIdx + 1} of {totalSubtopics}
+            </span>
+            <span style={{ fontSize: "12px", color: "#6B7280" }}>
+              {subtopics[currentSubtopicIdx]}
+            </span>
+          </div>
+          <div style={{ background: "#E5E7EB", borderRadius: "4px", height: "4px" }}>
+            <div style={{
+              height: "4px", borderRadius: "4px",
+              background: "linear-gradient(135deg, #7C3AED, #10B981)",
+              width: `${((currentSubtopicIdx + 1) / totalSubtopics) * 100}%`,
+              transition: "width 0.4s ease"
+            }} />
+          </div>
+          {/* Subtopic dots */}
+          <div style={{ display: "flex", gap: "6px", marginTop: "10px" }}>
+            {subtopics.map((st, i) => (
+              <div key={i} title={st} style={{
+                flex: 1, height: "4px", borderRadius: "4px",
+                background: i < currentSubtopicIdx ? "#10B981"
+                  : i === currentSubtopicIdx ? "#7C3AED" : "#E5E7EB",
+                transition: "background 0.3s"
+              }} />
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Loading */}
       {phase === "loading" && (
         <div style={{ textAlign: "center", padding: "64px 0" }}>
@@ -332,12 +408,10 @@ export default function TopicView({ topic, module: mod, course, level, onComplet
       {/* ── TEACHING PHASE ── */}
       {phase === "teaching" && teaching && (
         <div>
-          {/* Chat thread */}
           {messages.map((msg, idx) => (
             <div key={idx}>
               {msg.role === "nova" && (
                 <div>
-                  {/* Explanation */}
                   <div style={{
                     background: "#F9FAFB", border: "1.5px solid #E5E7EB",
                     borderRadius: "20px", padding: "28px", marginBottom: "16px"
@@ -349,10 +423,12 @@ export default function TopicView({ topic, module: mod, course, level, onComplet
                         Miss Nova
                       </span>
                       <button
-                        onClick={() => isSpeaking ? stop() : speak(msg.data.explanation || msg.data.answer || "")}
-                        title={isSpeaking ? "Stop speaking" : "Replay"}
+                        onClick={() => isSpeaking
+                          ? stop()
+                          : speak((msg.data.explanation || msg.data.answer || "").replace(/_/g, ""))}
                         style={{
-                          marginLeft: "auto", background: isSpeaking ? "#EDE9FE" : "#F3F4F6",
+                          marginLeft: "auto",
+                          background: isSpeaking ? "#EDE9FE" : "#F3F4F6",
                           border: `1.5px solid ${isSpeaking ? "#C4B5FD" : "#E5E7EB"}`,
                           borderRadius: "8px", padding: "4px 10px", cursor: "pointer",
                           fontSize: "14px", color: isSpeaking ? "#7C3AED" : "#6B7280"
@@ -361,25 +437,19 @@ export default function TopicView({ topic, module: mod, course, level, onComplet
                       </button>
                     </div>
                     <div style={{ color: "#374151", lineHeight: 1.8, fontSize: "15px" }}>
-                      {(msg.data.explanation || msg.data.answer || "").split("\n\n").map((para, i) => (
-                        <p key={i} style={{ marginBottom: "14px" }}
-                          dangerouslySetInnerHTML={{
-                            __html: para.replace(/_(.*?)_/g, "<em>$1</em>")
-                          }}
-                        />
-                      ))}
+                      {renderExplanation(msg.data.explanation || msg.data.answer || "")}
                     </div>
                   </div>
 
-                  {/* Example — only for explanation type */}
-                  {msg.data.type === "explanation" && msg.data.example_text && (
+                  {/* Analogy */}
+                  {msg.data.example_text && (
                     <div style={{
                       background: "#EDE9FE", border: "1.5px solid #C4B5FD",
                       borderRadius: "20px", padding: "24px", marginBottom: "16px"
                     }}>
                       <p style={{ fontSize: "12px", fontWeight: 700, color: "#7C3AED",
                         letterSpacing: "1px", marginBottom: "10px" }}>
-                        💡 EXAMPLE
+                        💡 ANALOGY
                       </p>
                       <p style={{ color: "#4C1D95", lineHeight: 1.7, fontSize: "15px" }}>
                         {msg.data.example_text}
@@ -388,7 +458,7 @@ export default function TopicView({ topic, module: mod, course, level, onComplet
                   )}
 
                   {/* Code */}
-                  {msg.data.type === "explanation" && msg.data.code && msg.data.code.trim() !== "" && (
+                  {msg.data.code && msg.data.code.trim() !== "" && (
                     <div style={{ marginBottom: "16px", borderRadius: "16px",
                       overflow: "hidden", border: "1.5px solid #E5E7EB" }}>
                       <div style={{ background: "#1E1E1E", padding: "10px 16px",
@@ -396,7 +466,9 @@ export default function TopicView({ topic, module: mod, course, level, onComplet
                         <span style={{ color: "#9CA3AF", fontSize: "12px", fontWeight: 600 }}>
                           {msg.data.code_language?.toUpperCase() || "CODE"}
                         </span>
-                        <span style={{ color: "#6B7280", fontSize: "11px" }}>Miss Nova's example</span>
+                        <span style={{ color: "#6B7280", fontSize: "11px" }}>
+                          Miss Nova's example
+                        </span>
                       </div>
                       <Editor
                         height="200px"
@@ -427,12 +499,13 @@ export default function TopicView({ topic, module: mod, course, level, onComplet
               )}
 
               {msg.role === "user" && (
-                <div style={{
-                  display: "flex", justifyContent: "flex-end", marginBottom: "16px"
-                }}>
+                <div style={{ display: "flex", justifyContent: "flex-end",
+                  marginBottom: "16px" }}>
                   <div style={{
-                    background: "#7C3AED", color: "white", borderRadius: "16px 16px 4px 16px",
-                    padding: "12px 18px", maxWidth: "70%", fontSize: "14px", lineHeight: 1.6
+                    background: "#7C3AED", color: "white",
+                    borderRadius: "16px 16px 4px 16px",
+                    padding: "12px 18px", maxWidth: "70%",
+                    fontSize: "14px", lineHeight: 1.6
                   }}>
                     {msg.text}
                   </div>
@@ -445,61 +518,26 @@ export default function TopicView({ topic, module: mod, course, level, onComplet
             <p style={{ color: "#EF4444", marginBottom: "16px" }}>{error}</p>
           )}
 
-          {/* Understanding check */}
-          <div style={{
-            background: "#F0FDF4", border: "1.5px solid #BBF7D0",
-            borderRadius: "14px", padding: "16px", marginBottom: "16px"
-          }}>
-            <p style={{ fontSize: "14px", color: "#166534", fontWeight: 600, marginBottom: "10px" }}>
-              👩‍🏫 Did you follow that?
-            </p>
-            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-              <button
-                onClick={() => {
-                  setFollowUp("Yes, I understand! What should I know next about this topic?")
-                  handleFollowUp()
-                }}
-                disabled={followUpLoading}
-                style={{
-                  padding: "8px 16px", borderRadius: "10px", fontWeight: 600,
-                  fontSize: "13px", background: "#10B981", color: "white",
-                  border: "none", cursor: "pointer", opacity: followUpLoading ? 0.5 : 1
-                }}>
-                ✅ Yes, I got it!
-              </button>
-              <button
-                onClick={handleExplainDifferently}
-                disabled={followUpLoading}
-                style={{
-                  padding: "8px 16px", borderRadius: "10px", fontWeight: 600,
-                  fontSize: "13px", background: "#EDE9FE", color: "#6D28D9",
-                  border: "1.5px solid #C4B5FD", cursor: "pointer",
-                  opacity: followUpLoading ? 0.5 : 1
-                }}>
-                🔄 Explain differently
-              </button>
-              <button
-                onClick={() => {
-                  setFollowUp("What are the most important things I should know about this topic before moving on?")
-                  handleFollowUp()
-                }}
-                disabled={followUpLoading}
-                style={{
-                  padding: "8px 16px", borderRadius: "10px", fontWeight: 600,
-                  fontSize: "13px", background: "#F3F4F6", color: "#374151",
-                  border: "1.5px solid #E5E7EB", cursor: "pointer",
-                  opacity: followUpLoading ? 0.5 : 1
-                }}>
-                💡 What else should I know?
-              </button>
-            </div>
+          {/* Action row */}
+          <div style={{ display: "flex", gap: "10px", marginBottom: "12px" }}>
+            <button
+              onClick={handleExplainDifferently}
+              disabled={followUpLoading}
+              style={{
+                padding: "10px 18px", borderRadius: "10px", fontWeight: 600,
+                fontSize: "13px", background: "#EDE9FE", color: "#6D28D9",
+                border: "1.5px solid #C4B5FD", cursor: "pointer",
+                opacity: followUpLoading ? 0.5 : 1
+              }}>
+              🔄 Explain differently
+            </button>
           </div>
 
-          {/* Follow up */}
-          <div style={{ display: "flex", gap: "10px", marginBottom: "16px" }}>
+          {/* Follow-up input */}
+          <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
             <input
               type="text"
-              placeholder="Ask Miss Nova a question..."
+              placeholder="Ask Miss Nova a question about this..."
               value={followUp}
               onChange={e => setFollowUp(e.target.value)}
               onKeyDown={e => e.key === "Enter" && handleFollowUp()}
@@ -509,70 +547,6 @@ export default function TopicView({ topic, module: mod, course, level, onComplet
                 color: "#111827", outline: "none", fontFamily: "Inter, sans-serif"
               }}
             />
-
-            {/* Mic button */}
-            <button
-              onMouseDown={startRecording}
-              onMouseUp={async () => {
-                const blob = await stopRecording()
-                if (!blob) return
-                const formData = new FormData()
-                formData.append("audio", blob, "audio.webm")
-                try {
-                  const res = await fetch(`${API}/transcribe`, { method: "POST", body: formData })
-                  const data = await res.json()
-                  if (data.transcript) {
-                    setFollowUp(data.transcript)
-                    // auto-submit
-                    setTimeout(() => {
-                      const newHistory = [
-                        ...history,
-                        { role: "assistant", content: teaching?.explanation || teaching?.answer || "" },
-                        { role: "user", content: data.transcript },
-                      ]
-                      setHistory(newHistory)
-                      setFollowUp("")
-                      setFollowUpLoading(true)
-                      axios.post(`${API}/teach`, {
-                        topic_title: topic.title,
-                        topic_description: topic.description || "",
-                        module_title: mod.title,
-                        course_title: course.title,
-                        conversation_history: newHistory,
-                      }).then(res => {
-                        const d = res.data.response
-                        if (d.type === "ready_for_quiz") {
-                          loadPractice()
-                        } else {
-                          setTeaching(d)
-                          setMessages(prev => [
-                            ...prev,
-                            { role: "user", text: data.transcript },
-                            { role: "nova", data: d }
-                          ])
-                          setExchangeCount(prev => prev + 1)
-                        }
-                      }).catch(() => {
-                        setError("Something went wrong. Please try again.")
-                      }).finally(() => {
-                        setFollowUpLoading(false)
-                      })
-                    }, 100)
-                  }
-                } catch {
-                  // silently fail — user can type instead
-                }
-              }}
-              title="Hold to speak"
-              style={{
-                padding: "12px 16px", borderRadius: "12px", border: "none",
-                background: isRecording ? "#EF4444" : "#F3F4F6",
-                color: isRecording ? "white" : "#6B7280",
-                cursor: "pointer", fontSize: "18px",
-                transition: "all 0.15s"
-              }}>
-              🎤
-            </button>
             <button onClick={handleFollowUp}
               disabled={!followUp.trim() || followUpLoading}
               style={{
@@ -585,24 +559,15 @@ export default function TopicView({ topic, module: mod, course, level, onComplet
             </button>
           </div>
 
-          {/* Understanding gate */}
-          {exchangeCount === 0 && (
-            <div style={{
-              background: "#FFF7ED", border: "1.5px solid #FED7AA",
-              borderRadius: "14px", padding: "16px", marginBottom: "12px",
-              fontSize: "14px", color: "#92400E"
-            }}>
-              💡 Take a moment to read through the explanation before moving on.
-              Ask Miss Nova any questions you have!
-            </div>
-          )}
-
+          {/* Subtopic navigation */}
           <div style={{ display: "flex", gap: "10px" }}>
-            <button className="btn-success" style={{ flex: 1 }}
-              onClick={loadPractice}
-              disabled={exchangeCount === 0}>
-              {exchangeCount === 0
-                ? "Ask at least one question first ✋"
+            <button
+              className="btn-success"
+              style={{ flex: 1, fontSize: "15px" }}
+              onClick={nextSubtopic}
+              disabled={followUpLoading}>
+              {currentSubtopicIdx < totalSubtopics - 1
+                ? `Got it — Next: ${subtopics[currentSubtopicIdx + 1]} →`
                 : "I understand — Let's practice ✏️"}
             </button>
             <button onClick={onSkip} style={{
@@ -619,7 +584,6 @@ export default function TopicView({ topic, module: mod, course, level, onComplet
       {/* ── PRACTICE PHASE ── */}
       {phase === "practice" && practice && (
         <div>
-          {/* Header */}
           <div style={{
             background: "#EDE9FE", border: "1.5px solid #C4B5FD",
             borderRadius: "20px", padding: "24px", marginBottom: "24px"
@@ -642,7 +606,6 @@ export default function TopicView({ topic, module: mod, course, level, onComplet
             )}
           </div>
 
-          {/* Answer area */}
           <div style={{ marginBottom: "16px" }}>
             <label style={{ fontSize: "13px", fontWeight: 600, color: "#374151",
               display: "block", marginBottom: "8px" }}>
@@ -657,56 +620,48 @@ export default function TopicView({ topic, module: mod, course, level, onComplet
                 width: "100%", padding: "14px 16px", borderRadius: "14px",
                 border: "1.5px solid #E5E7EB", fontSize: "14px", color: "#111827",
                 outline: "none", fontFamily: "JetBrains Mono, monospace",
-                resize: "vertical", lineHeight: 1.6,
-                background: "#F9FAFB"
+                resize: "vertical", lineHeight: 1.6, background: "#F9FAFB"
               }}
             />
           </div>
 
           {/* Hints */}
-          <div style={{ marginBottom: "16px" }}>
-            {practice.hints && hintsShown > 0 && (
-              <div style={{ marginBottom: "12px" }}>
-                {practice.hints.slice(0, hintsShown).map((hint, i) => (
-                  <div key={i} style={{
-                    background: "#FFF7ED", border: "1.5px solid #FED7AA",
-                    borderRadius: "12px", padding: "12px 16px", marginBottom: "8px",
-                    display: "flex", gap: "10px", alignItems: "flex-start"
-                  }}>
-                    <span style={{ fontSize: "14px" }}>💡</span>
-                    <p style={{ color: "#92400E", fontSize: "14px", lineHeight: 1.6 }}>
-                      <strong>Hint {i + 1}:</strong> {hint}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <div style={{ display: "flex", gap: "10px" }}>
-              {practice.hints && hintsShown < practice.hints.length && (
-                <button
-                  onClick={() => setHintsShown(h => h + 1)}
-                  style={{
-                    padding: "10px 18px", borderRadius: "10px", fontWeight: 600,
-                    fontSize: "13px", background: "#FFF7ED", color: "#92400E",
-                    border: "1.5px solid #FED7AA", cursor: "pointer"
-                  }}>
-                  💡 Show hint ({hintsShown}/{practice.hints.length})
-                </button>
-              )}
-              <button
-                onClick={() => setShowSolution(!showSolution)}
-                style={{
-                  padding: "10px 18px", borderRadius: "10px", fontWeight: 600,
-                  fontSize: "13px", background: "#F3F4F6", color: "#6B7280",
-                  border: "1.5px solid #E5E7EB", cursor: "pointer"
+          {practice.hints && hintsShown > 0 && (
+            <div style={{ marginBottom: "12px" }}>
+              {practice.hints.slice(0, hintsShown).map((hint, i) => (
+                <div key={i} style={{
+                  background: "#FFF7ED", border: "1.5px solid #FED7AA",
+                  borderRadius: "12px", padding: "12px 16px", marginBottom: "8px",
+                  display: "flex", gap: "10px"
                 }}>
-                {showSolution ? "Hide solution" : "See solution"}
-              </button>
+                  <span>💡</span>
+                  <p style={{ color: "#92400E", fontSize: "14px", lineHeight: 1.6 }}>
+                    <strong>Hint {i + 1}:</strong> {hint}
+                  </p>
+                </div>
+              ))}
             </div>
+          )}
+
+          <div style={{ display: "flex", gap: "10px", marginBottom: "16px" }}>
+            {practice.hints && hintsShown < practice.hints.length && (
+              <button onClick={() => setHintsShown(h => h + 1)} style={{
+                padding: "10px 18px", borderRadius: "10px", fontWeight: 600,
+                fontSize: "13px", background: "#FFF7ED", color: "#92400E",
+                border: "1.5px solid #FED7AA", cursor: "pointer"
+              }}>
+                💡 Show hint ({hintsShown}/{practice.hints.length})
+              </button>
+            )}
+            <button onClick={() => setShowSolution(!showSolution)} style={{
+              padding: "10px 18px", borderRadius: "10px", fontWeight: 600,
+              fontSize: "13px", background: "#F3F4F6", color: "#6B7280",
+              border: "1.5px solid #E5E7EB", cursor: "pointer"
+            }}>
+              {showSolution ? "Hide solution" : "See solution"}
+            </button>
           </div>
 
-          {/* Solution */}
           {showSolution && (
             <div style={{
               background: "#F0FDF4", border: "1.5px solid #BBF7D0",
@@ -723,15 +678,13 @@ export default function TopicView({ topic, module: mod, course, level, onComplet
             </div>
           )}
 
-          {/* Practice evaluation feedback */}
           {practiceEval && (
             <div style={{
               background: practiceEval.passed ? "#F0FDF4" : "#FFF7ED",
               border: `1.5px solid ${practiceEval.passed ? "#BBF7D0" : "#FED7AA"}`,
               borderRadius: "16px", padding: "20px", marginBottom: "16px"
             }}>
-              <div style={{ display: "flex", gap: "10px", alignItems: "flex-start",
-                marginBottom: "8px" }}>
+              <div style={{ display: "flex", gap: "10px", alignItems: "flex-start" }}>
                 <span style={{ fontSize: "20px" }}>
                   {practiceEval.score === "correct" ? "✅"
                     : practiceEval.score === "partial" ? "🟡" : "❌"}
@@ -758,13 +711,10 @@ export default function TopicView({ topic, module: mod, course, level, onComplet
             </div>
           )}
 
-          {/* Actions */}
           <div style={{ display: "flex", gap: "10px", marginTop: "8px" }}>
             {!practiceEval ? (
               <>
-                <button
-                  className="btn-primary"
-                  style={{ flex: 1, fontSize: "15px" }}
+                <button className="btn-primary" style={{ flex: 1, fontSize: "15px" }}
                   onClick={submitPractice}
                   disabled={!practiceAnswer.trim() || practiceEvalLoading}>
                   {practiceEvalLoading ? "Miss Nova is checking..." : "Submit answer ✓"}
@@ -780,14 +730,12 @@ export default function TopicView({ topic, module: mod, course, level, onComplet
                   onClick={loadQuiz}>
                   Take the quiz 🧠
                 </button>
-                <button onClick={() => {
-                  setPracticeEval(null)
-                  setPracticeAnswer("")
-                }} style={{
-                  padding: "14px 20px", borderRadius: "12px", fontWeight: 600,
-                  fontSize: "14px", background: "#F3F4F6", color: "#6B7280",
-                  border: "1.5px solid #E5E7EB", cursor: "pointer"
-                }}>
+                <button onClick={() => { setPracticeEval(null); setPracticeAnswer("") }}
+                  style={{
+                    padding: "14px 20px", borderRadius: "12px", fontWeight: 600,
+                    fontSize: "14px", background: "#F3F4F6", color: "#6B7280",
+                    border: "1.5px solid #E5E7EB", cursor: "pointer"
+                  }}>
                   Try again
                 </button>
               </>
@@ -875,9 +823,7 @@ export default function TopicView({ topic, module: mod, course, level, onComplet
             </div>
           ))}
 
-          {error && (
-            <p style={{ color: "#EF4444", marginBottom: "16px" }}>{error}</p>
-          )}
+          {error && <p style={{ color: "#EF4444", marginBottom: "16px" }}>{error}</p>}
 
           <button className="btn-primary"
             style={{ width: "100%", fontSize: "16px" }}
@@ -892,7 +838,6 @@ export default function TopicView({ topic, module: mod, course, level, onComplet
       {/* ── REPAIR PHASE ── */}
       {phase === "repair" && repair && (
         <div>
-          {/* Header */}
           <div style={{
             background: "#FFF7ED", border: "1.5px solid #FED7AA",
             borderRadius: "20px", padding: "24px", marginBottom: "20px"
@@ -910,7 +855,6 @@ export default function TopicView({ topic, module: mod, course, level, onComplet
             </p>
           </div>
 
-          {/* Re-explanation */}
           <div style={{
             background: "#F9FAFB", border: "1.5px solid #E5E7EB",
             borderRadius: "20px", padding: "28px", marginBottom: "20px"
@@ -923,13 +867,10 @@ export default function TopicView({ topic, module: mod, course, level, onComplet
               </span>
             </div>
             <div style={{ color: "#374151", lineHeight: 1.8, fontSize: "15px" }}>
-              {(repair.explanation || "").split("\n\n").map((para, i) => (
-                <p key={i} style={{ marginBottom: "14px" }}>{para}</p>
-              ))}
+              {renderExplanation(repair.explanation || "")}
             </div>
           </div>
 
-          {/* Example */}
           {repair.example_text && (
             <div style={{
               background: "#EDE9FE", border: "1.5px solid #C4B5FD",
@@ -945,7 +886,6 @@ export default function TopicView({ topic, module: mod, course, level, onComplet
             </div>
           )}
 
-          {/* Code */}
           {repair.code && repair.code.trim() !== "" && (
             <div style={{ marginBottom: "20px", borderRadius: "16px",
               overflow: "hidden", border: "1.5px solid #E5E7EB" }}>
@@ -954,9 +894,7 @@ export default function TopicView({ topic, module: mod, course, level, onComplet
                 <span style={{ color: "#9CA3AF", fontSize: "12px", fontWeight: 600 }}>
                   {repair.code_language?.toUpperCase() || "CODE"}
                 </span>
-                <span style={{ color: "#6B7280", fontSize: "11px" }}>
-                  Miss Nova's example
-                </span>
+                <span style={{ color: "#6B7280", fontSize: "11px" }}>Miss Nova's example</span>
               </div>
               <Editor
                 height="180px"
@@ -972,7 +910,6 @@ export default function TopicView({ topic, module: mod, course, level, onComplet
             </div>
           )}
 
-          {/* Check in */}
           {repair.check_in && (
             <div style={{
               background: "#F0FDF4", border: "1.5px solid #BBF7D0",
@@ -984,13 +921,17 @@ export default function TopicView({ topic, module: mod, course, level, onComplet
             </div>
           )}
 
-          {/* Actions */}
           <div style={{ display: "flex", gap: "10px" }}>
             <button className="btn-success" style={{ flex: 1, fontSize: "15px" }}
               onClick={loadQuiz}>
               Ready — Retry the quiz 🧠
             </button>
-            <button onClick={() => loadTeaching([])} style={{
+            <button onClick={() => {
+              setCurrentSubtopicIdx(0)
+              setSubtopicHistory([])
+              setMessages([])
+              loadTeaching(0, [])
+            }} style={{
               padding: "14px 20px", borderRadius: "12px", fontWeight: 600,
               fontSize: "14px", background: "#F3F4F6", color: "#6B7280",
               border: "1.5px solid #E5E7EB", cursor: "pointer"
@@ -1000,7 +941,6 @@ export default function TopicView({ topic, module: mod, course, level, onComplet
           </div>
         </div>
       )}
-
 
       {/* ── RESULT PHASE ── */}
       {phase === "result" && results && (
