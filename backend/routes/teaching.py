@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, UploadFile, File
 from pydantic import BaseModel
 from agents.quiz_agent import generate_quiz, evaluate_quiz, repair_concepts
 from agents.prerequisites_agent import generate_prerequisites
-from agents.teaching_agent import teach_topic, generate_practice, evaluate_practice, client
+from agents.teaching_agent import teach_topic, generate_practice, evaluate_practice, client1
 from db.queries import save_course, save_progress, load_latest_progress, create_session
 
 router = APIRouter()
@@ -211,7 +211,7 @@ def practice_evaluate(request: PracticeEvaluateRequest):
 async def transcribe(audio: UploadFile = File(...)):
     try:
         audio_bytes = await audio.read()
-        transcription = client.audio.transcriptions.create(
+        transcription = client1.audio.transcriptions.create(
             file=(audio.filename or "audio.webm", audio_bytes, audio.content_type or "audio/webm"),
             model="whisper-large-v3-turbo",
         )

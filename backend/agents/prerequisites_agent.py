@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 
 load_dotenv(dotenv_path=Path(__file__).parent.parent / ".env")
 
-client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+client = Groq(api_key=os.getenv("GROQ_API_KEY_1"))
 
 SYSTEM_PROMPT = """
 You are Miss Nova, an AI tutor helping a new learner get set up before starting their course.

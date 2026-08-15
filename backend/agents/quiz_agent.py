@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 
 load_dotenv(dotenv_path=Path(__file__).parent.parent / ".env")
 
-client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+client = Groq(api_key=os.getenv("GROQ_API_KEY_1"))
 
 GENERATE_PROMPT = """
 You are Miss Nova, generating a short quiz for a topic.

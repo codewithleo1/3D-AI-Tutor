@@ -7,7 +7,18 @@ from dotenv import load_dotenv
 
 load_dotenv(dotenv_path=Path(__file__).parent.parent / ".env")
 
-client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+client1 = Groq(api_key=os.getenv("GROQ_API_KEY_1"))
+client2 = Groq(api_key=os.getenv("GROQ_API_KEY_2"))
+
+
+def groq_create(**kwargs):
+    """Try client1 first, fall back to client2 on rate limit (429)."""
+    try:
+        return client1.chat.completions.create(**kwargs)
+    except Exception as e:
+        if "429" in str(e) or "rate_limit" in str(e).lower():
+            return client2.chat.completions.create(**kwargs)
+        raise
 
 SYSTEM_PROMPT = """
 You are Miss Nova, a warm and patient AI tutor. You teach like the best human tutors do — one idea at a time, with questions, not lectures.
@@ -271,7 +282,7 @@ Full course outline (for orientation only — stay on current subtopic):
 
     is_followup = len(conversation_history) > 0
 
-    response = client.chat.completions.create(
+    response = groq_create(
         model="llama-3.3-70b-versatile",
         messages=messages,
         max_tokens=500 if is_followup else 900,
@@ -322,7 +333,7 @@ Generate a practice exercise for this topic.
         },
     ]
 
-    response = client.chat.completions.create(
+    response = groq_create(
         model="llama-3.3-70b-versatile",
         messages=messages,
         max_tokens=800,
@@ -370,7 +381,7 @@ Evaluate this answer.
         },
     ]
 
-    response = client.chat.completions.create(
+    response = groq_create(
         model="llama-3.3-70b-versatile",
         messages=messages,
         max_tokens=400,
