@@ -180,7 +180,7 @@ Remember: Each topic must cover EXACTLY ONE concept. Never combine concepts. Eve
 """
 
     response = client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
+        model="openai/gpt-oss-120b",
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": user_message},

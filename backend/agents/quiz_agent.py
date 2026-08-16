@@ -141,7 +141,7 @@ def generate_quiz(topic_title: str, topic_description: str) -> dict:
     """Generate 3 quiz questions for a topic."""
 
     response = client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
+        model="openai/gpt-oss-120b",
         messages=[
             {"role": "system", "content": GENERATE_PROMPT},
             {"role": "user", "content": f"Generate a quiz for topic: {topic_title}\nDescription: {topic_description}"},
@@ -165,7 +165,7 @@ def evaluate_quiz(topic_title: str, questions: list, answers: list) -> dict:
     }, indent=2)
 
     response = client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
+        model="openai/gpt-oss-120b",
         messages=[
             {"role": "system", "content": EVALUATE_PROMPT},
             {"role": "user", "content": f"Evaluate these answers:\n{payload}"},
@@ -191,7 +191,7 @@ def repair_concepts(
     """Re-explain only the concepts the student failed on."""
 
     response = client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
+        model="openai/gpt-oss-120b",
         messages=[
             {"role": "system", "content": REPAIR_PROMPT},
             {

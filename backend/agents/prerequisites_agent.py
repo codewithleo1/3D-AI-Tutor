@@ -63,7 +63,7 @@ def generate_prerequisites(goal: str, level: str) -> dict:
     """Generate prerequisites checklist for a course goal and level."""
 
     response = client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
+        model="openai/gpt-oss-120b",
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": f"Course goal: {goal}\nLearner level: {level}"},

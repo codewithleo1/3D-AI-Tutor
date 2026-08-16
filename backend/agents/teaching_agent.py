@@ -299,7 +299,7 @@ Full course outline (for orientation only):
     is_followup = len(conversation_history) > 0
 
     response = groq_create(
-        model="llama-3.3-70b-versatile",
+        model="openai/gpt-oss-120b",
         messages=messages,
         max_tokens=500 if is_followup else 900,
         temperature=0.7,
@@ -350,7 +350,7 @@ Generate a practice exercise for this topic.
     ]
 
     response = groq_create(
-        model="llama-3.3-70b-versatile",
+        model="openai/gpt-oss-120b",
         messages=messages,
         max_tokens=800,
         temperature=0.7,
@@ -398,7 +398,7 @@ Evaluate this answer.
     ]
 
     response = groq_create(
-        model="llama-3.3-70b-versatile",
+        model="openai/gpt-oss-120b",
         messages=messages,
         max_tokens=400,
         temperature=0.3,
