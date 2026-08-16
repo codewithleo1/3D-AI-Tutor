@@ -185,7 +185,7 @@ Remember: Each topic must cover EXACTLY ONE concept. Never combine concepts. Eve
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": user_message},
         ],
-        max_tokens=3000,
+        max_tokens=4000,
         temperature=0.7,
     )
 
@@ -208,4 +208,18 @@ Remember: Each topic must cover EXACTLY ONE concept. Never combine concepts. Eve
     if start != -1 and end > start:
         raw = raw[start:end]
 
-    return json.loads(raw)
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        # Try fixing common issues
+        import re
+        # Remove trailing commas before ] or }
+        raw = re.sub(r',\s*([}\]])', r'\1', raw)
+        # Fix missing commas between } and {
+        raw = re.sub(r'}\s*{', '},{', raw)
+        try:
+            return json.loads(raw)
+        except json.JSONDecodeError:
+            # Strip control characters and try again
+            raw = re.sub(r'[\x00-\x1f\x7f]', ' ', raw)
+            return json.loads(raw)
