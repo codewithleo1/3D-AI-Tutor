@@ -174,6 +174,9 @@ export default function App() {
     setRoadmap(null); setError(""); setFinalized(false)
     setOpenSection(1); setTeaching(false)
     setCurrentModuleIdx(0); setCurrentTopicIdx(0)
+    setCourseUnlocked(false)
+    setShowPaymentGate(false)
+    setShowPrereqs(false)
     clearProgress()
     window.scrollTo({ top: 0, behavior: "smooth" })
   }
