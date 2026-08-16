@@ -318,6 +318,8 @@ CSS classes defined: `section-card`, `btn-primary`, `btn-success`, `option-btn`,
 | 23 | Prompt rewrite caused 500 errors | Keep same JSON response structure — only change instructions, not field names |
 | 24 | TTS speaks underscores literally | Strip underscores before passing text to speak() |
 | 25 | git push fails with "Could not resolve host" | Temporary DNS issue — wait 30 seconds and retry |
+| 21 | PowerShell Set-Content overwrote TopicView.jsx with Python content | Always specify backend path explicitly; use Invoke-WebRequest to restore from GitHub |
+| 22 | GROQ_API_KEY renamed to GROQ_API_KEY_1 — all agents must be updated | Use Select-String across all agent files before restarting |
 ---
 
 ## Coding Rules (Follow Every Session)
@@ -350,3 +352,4 @@ CSS classes defined: `section-card`, `btn-primary`, `btn-success`, `option-btn`,
 | Aug 12, 2026 | RPM avatar merged to main — separate GLBs, morph targets, lip sync, mood expressions, poseSeed, debugAvatar mode. Fixed Intel UHD WebGL issue. Verified live on Vercel. | 6e6dbae |
 | Aug 12, 2026 | Voice input complete — Groq Whisper /api/transcribe endpoint, mic toggle in TopicView, auto-submit after transcription. Full loop: speak → transcribe → Nova responds + speaks. | ce7cfe0 |
 | Aug 13, 2026 | Teaching prompt rewritten (chunked, hook, no code dump). Practice prompt rewritten. Roadmap generates subtopics. Voice auto-submit. Italics fix. Subtopic architecture designed. | 36dce6c |
+| Aug 15, 2026 | Subtopic-aware teaching, progress bar, dot indicators, dual Groq key fallback, deployed to Render | ec7d869, 441884b, 9b45443, 26ee3e4, 67bbf63 |
