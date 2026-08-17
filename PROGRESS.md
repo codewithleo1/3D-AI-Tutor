@@ -42,6 +42,7 @@ Next session goal: Phase B voice loop — auto-listen after Nova speaks (silence
 | Hosting FE | Vercel | 🔒 Phase 4 |
 | Hosting BE | Render | 🔒 Phase 4 |
 | Code Editor | Monaco Editor | ✅ Installed |
+| LLM | Groq openai/gpt-oss-120b | Migrated from llama-3.3-70b-versatile (deprecated Aug 16 2026) |
 
 ---
 
@@ -254,37 +255,126 @@ CSS classes defined: `section-card`, `btn-primary`, `btn-success`, `option-btn`,
 ├── frontend/
 │   ├── index.html
 │   ├── package.json
+│   ├── package-lock.json
 │   ├── vite.config.js
+│   ├── .env
 │   └── src/
-│       ├── App.jsx                        ✅ 3-view router + teaching mode
+│       ├── App.jsx                        ✅ auth gate + roadmap + teaching + payment + baseline
 │       ├── index.css                      ✅ brand system
 │       ├── main.jsx                       ✅ React root
 │       ├── components/
-│       │   ├── Avatar.jsx             ✅ 3D Miss Nova with mood reactions
-│       │   ├── Prerequisites.jsx      ✅ setup guide screen
-│       │   ├── Sidebar.jsx            ✅ module/topic nav
-│       │   └── TopicView.jsx          ✅ teach + quiz UI
+│       │   ├── Avatar.jsx                 ✅ 3D RPM avatar, mood + lipsync + visemes
+│       │   ├── Prerequisites.jsx          ✅ setup guide screen
+│       │   ├── Sidebar.jsx                ✅ module/topic nav, lock states
+│       │   └── TopicView.jsx              ✅ subtopic teaching + practice + quiz + repair
 │       ├── hooks/
 │       │   ├── useCourseProgress.js       ✅ localStorage + Neon DB sync
-│       │   └── useSpeech.js               ✅ Web Speech API TTS hook
+│       │   └── useSpeech.js               ✅ Web Speech API TTS + Whisper mic
+│       ├── lib/
+│       │   └── supabase.js                ✅ Supabase client
+│       ├── pages/
+│       │   ├── AuthPage.jsx               ✅ Supabase login/signup
+│       │   ├── PaymentGate.jsx            ✅ Razorpay Rs.1 + promo codes
+│       │   └── BaselineAssessment.jsx     ✅ 5 MCQ knowledge check + module skip
 │       └── utils/
 │           └── session.js                 ✅ session UUID generator
 │
 ├── backend/
-│   ├── main.py                            ✅ FastAPI app + CORS
-│   ├── pyproject.toml
+│   ├── main.py                            ✅ FastAPI app + CORS + all routers
+│   ├── pyproject.toml                     ✅ uv dependencies
+│   ├── requirements.txt                   ✅ Render deployment dependencies
+│   ├── .env                               ✅ API keys
 │   ├── agents/
-│   │   ├── roadmap_agent.py               ✅ curriculum generation
-│   │   ├── teaching_agent.py              ✅ topic explanation + follow-up
-│   │   ├── quiz_agent.py                  ✅ generate + evaluate quiz
-│   │   └── prerequisites_agent.py         ✅ tool setup guide
+│   │   ├── roadmap_agent.py               ✅ curriculum generation + subtopics
+│   │   ├── teaching_agent.py              ✅ subtopic-aware teaching + practice + repair
+│   │   ├── quiz_agent.py                  ✅ generate + evaluate + repair quiz
+│   │   ├── prerequisites_agent.py         ✅ tool setup guide
+│   │   └── baseline_agent.py              ✅ 5 MCQ baseline + score evaluation
 │   ├── db/
-│   │   └── neon.py                        ✅ PostgreSQL connection
+│   │   ├── neon.py                        ✅ PostgreSQL connection
+│   │   └── queries.py                     ✅ DB queries (sessions, courses, progress)
 │   └── routes/
 │       ├── chat.py                        ✅ POST /api/roadmap
-│       └── teaching.py                    ✅ POST /api/teach + quiz + prereqs
+│       ├── teaching.py                    ✅ POST /api/teach + quiz + prereqs + transcribe
+│       ├── payments.py                    ✅ POST /api/payments/* + promo codes
+│       └── baseline.py                    ✅ POST /api/baseline/generate + evaluate
 │
-└── PROGRESS.md
+├── PROGRESS.md
+├── .gitignore
+└── README.md
+```
+
+---
+
+## API Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/roadmap` | Generate personalized roadmap |
+| POST | `/api/teach` | Subtopic-aware teaching |
+| POST | `/api/quiz/generate` | Generate 3 quiz questions |
+| POST | `/api/quiz/evaluate` | Evaluate quiz answers |
+| POST | `/api/practice` | Generate practice exercise |
+| POST | `/api/practice/evaluate` | Evaluate practice answer |
+| POST | `/api/repair` | Re-explain failed concepts |
+| POST | `/api/prerequisites` | Tool setup guide |
+| POST | `/api/transcribe` | Groq Whisper voice input |
+| POST | `/api/baseline/generate` | 5 MCQ baseline questions |
+| POST | `/api/baseline/evaluate` | Score + recommend level |
+| POST | `/api/payments/validate-promo` | Validate promo code |
+| POST | `/api/payments/create-order` | Create Razorpay order |
+| POST | `/api/payments/verify` | Verify payment signature |
+| POST | `/api/progress/save-course` | Save course to DB |
+| POST | `/api/progress/save` | Save progress to DB |
+| POST | `/api/progress/load` | Load progress from DB |
+| GET | `/health` | Health check |
+
+---
+
+## Neon DB Schema
+
+```sql
+-- User sessions
+sessions (
+    id TEXT PRIMARY KEY,
+    goal TEXT,
+    level TEXT,
+    created_at TIMESTAMP
+)
+
+-- Roadmaps per session
+courses (
+    id TEXT PRIMARY KEY,
+    session_id TEXT,
+    roadmap JSONB,
+    created_at TIMESTAMP
+)
+
+-- Topic progress
+progress (
+    id SERIAL PRIMARY KEY,
+    session_id TEXT,
+    course_id TEXT,
+    completed_topics JSONB,
+    current_module INTEGER,
+    current_topic INTEGER,
+    updated_at TIMESTAMP,
+    UNIQUE(session_id, course_id)
+)
+
+-- Payments
+payments (
+    id SERIAL PRIMARY KEY,
+    user_id TEXT UNIQUE,
+    user_email TEXT,
+    amount_paise INTEGER,
+    promo_code TEXT,
+    status TEXT,
+    razorpay_order_id TEXT,
+    razorpay_payment_id TEXT,
+    paid_at TIMESTAMP,
+    created_at TIMESTAMP
+)
 ```
 
 ---
@@ -320,6 +410,11 @@ CSS classes defined: `section-card`, `btn-primary`, `btn-success`, `option-btn`,
 | 25 | git push fails with "Could not resolve host" | Temporary DNS issue — wait 30 seconds and retry |
 | 21 | PowerShell Set-Content overwrote TopicView.jsx with Python content | Always specify backend path explicitly; use Invoke-WebRequest to restore from GitHub |
 | 22 | GROQ_API_KEY renamed to GROQ_API_KEY_1 — all agents must be updated | Use Select-String across all agent files before restarting |
+| 26 | llama-3.3-70b-versatile deprecated Aug 16 2026 | Migrate to openai/gpt-oss-120b — same Groq API key, just model name change |
+| 27 | openai/gpt-oss-120b returns markdown asterisks in explanations | Strip ** and * in renderExplanation() and TTS speak() calls |
+| 28 | New model returns JSON with syntax errors (missing commas) | Add robust JSON repair in all agent files — strip trailing commas, fix {}{} patterns |
+| 29 | razorpay not in requirements.txt — Render deploy fails | Always add new pip packages to both pyproject.toml AND requirements.txt |
+| 30 | Avatar looks up too much sometimes | Camera angle issue — fix in future session |
 ---
 
 ## Coding Rules (Follow Every Session)
@@ -353,3 +448,5 @@ CSS classes defined: `section-card`, `btn-primary`, `btn-success`, `option-btn`,
 | Aug 12, 2026 | Voice input complete — Groq Whisper /api/transcribe endpoint, mic toggle in TopicView, auto-submit after transcription. Full loop: speak → transcribe → Nova responds + speaks. | ce7cfe0 |
 | Aug 13, 2026 | Teaching prompt rewritten (chunked, hook, no code dump). Practice prompt rewritten. Roadmap generates subtopics. Voice auto-submit. Italics fix. Subtopic architecture designed. | 36dce6c |
 | Aug 15, 2026 | Subtopic-aware teaching, progress bar, dot indicators, dual Groq key fallback, deployed to Render | ec7d869, 441884b, 9b45443, 26ee3e4, 67bbf63 |
+| Aug 16, 2026 | Supabase auth (login/signup), Razorpay Rs.1 payment gate, promo codes (MISSNOVA100/50/LEARNFREE), two-column payment UI, payments saved to Neon DB, real payment tested end-to-end | b532745, 1980b17, 3e9e359 |
+| Aug 17, 2026 | Migrated all agents to openai/gpt-oss-120b (llama-3.3-70b-versatile deprecated). Fixed razorpay in requirements.txt for Render. Built baseline assessment (5 MCQ, score-based module skip). Fixed markdown asterisks in TopicView. Robust JSON parser for new model. Render redeployed successfully. | d2fd18e |
