@@ -84,4 +84,10 @@ def generate_prerequisites(goal: str, level: str) -> dict:
                 raw = part
                 break
 
-    return json.loads(raw)
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        import re
+        raw = re.sub(r',\s*([}\]])', r'\1', raw)
+        raw = re.sub(r'[\x00-\x1f\x7f]', ' ', raw)
+        return json.loads(raw)

@@ -7,6 +7,7 @@ from db.neon import get_connection
 from routes.chat import router as chat_router
 from routes.teaching import router as teaching_router
 from routes.payments import router as payments_router
+from routes.baseline import router as baseline_router
 
 load_dotenv(dotenv_path=Path(__file__).parent / ".env")
 
@@ -23,6 +24,7 @@ app.add_middleware(
 app.include_router(chat_router, prefix="/api")
 app.include_router(teaching_router, prefix="/api")
 app.include_router(payments_router, prefix="/api")
+app.include_router(baseline_router, prefix="/api")
 
 
 @app.get("/health")

@@ -16,7 +16,7 @@ function renderExplanation(text) {
   if (!text) return null
   return text.split("\n\n").map((para, i) => (
     <p key={i} style={{ marginBottom: "14px" }}>
-      {para.replace(/_/g, "")}
+      {para.replace(/_/g, "").replace(/\*\*/g, "").replace(/\*/g, "")}
     </p>
   ))
 }
@@ -60,7 +60,7 @@ export default function TopicView({
 
  // Speak when new teaching arrives
   useEffect(() => {
-    const text = (teaching?.explanation || teaching?.answer || "").replace(/_/g, "")
+    const text = (teaching?.explanation || teaching?.answer || "").replace(/_/g, "").replace(/\*\*/g, "").replace(/\*/g, "")
     if (!text) return
     const timer = setTimeout(() => speak(text), 100)
     return () => clearTimeout(timer)
