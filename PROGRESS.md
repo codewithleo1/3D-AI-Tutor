@@ -227,6 +227,8 @@ CSS classes defined: `section-card`, `btn-primary`, `btn-success`, `option-btn`,
 - [x] poseSeed prop varies talking animation per topic
 - [x] debugAvatar mode in main.jsx (?debugAvatar URL param for isolated testing)
 - [x] Avatar live on Vercel — verified rendering on production
+- [x] Avatar background set to white (#FFFFFF) — matches app background
+- [ ] Avatar camera fine-tuned to show hands fully
 
 ---
 
@@ -415,6 +417,7 @@ payments (
 | 28 | New model returns JSON with syntax errors (missing commas) | Add robust JSON repair in all agent files — strip trailing commas, fix {}{} patterns |
 | 29 | razorpay not in requirements.txt — Render deploy fails | Always add new pip packages to both pyproject.toml AND requirements.txt |
 | 30 | Avatar looks up too much sometimes | Camera angle issue — fix in future session |
+| 31 | Avatar hands cut off at right edge of panel | Increase nova panel width + shift camera right with position [0.15, -0.2, 4.2] |
 ---
 
 ## Coding Rules (Follow Every Session)
@@ -450,3 +453,4 @@ payments (
 | Aug 15, 2026 | Subtopic-aware teaching, progress bar, dot indicators, dual Groq key fallback, deployed to Render | ec7d869, 441884b, 9b45443, 26ee3e4, 67bbf63 |
 | Aug 16, 2026 | Supabase auth (login/signup), Razorpay Rs.1 payment gate, promo codes (MISSNOVA100/50/LEARNFREE), two-column payment UI, payments saved to Neon DB, real payment tested end-to-end | b532745, 1980b17, 3e9e359 |
 | Aug 17, 2026 | Migrated all agents to openai/gpt-oss-120b (llama-3.3-70b-versatile deprecated). Fixed razorpay in requirements.txt for Render. Built baseline assessment (5 MCQ, score-based module skip). Fixed markdown asterisks in TopicView. Robust JSON parser for new model. Render redeployed successfully. | d2fd18e |
+| Aug 17, 2026 | Avatar background white, camera adjusted to show hands, panel width 360px. Quiz JSON parser pending. | local only |

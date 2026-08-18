@@ -9,6 +9,7 @@ import { supabase } from "./lib/supabase"
 import AuthPage from "./pages/AuthPage"
 import PaymentGate from "./pages/PaymentGate"
 import { useSpeech } from "./hooks/useSpeech"
+import BaselineAssessment from "./pages/BaselineAssessment"
 
 
 const API = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000/api"
@@ -79,6 +80,8 @@ export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [courseUnlocked, setCourseUnlocked] = useState(false)
   const [showPaymentGate, setShowPaymentGate] = useState(false)
+  const [showBaseline, setShowBaseline] = useState(false)
+  const [baselineResult, setBaselineResult] = useState(null)
   
   
 
@@ -231,6 +234,33 @@ export default function App() {
 
   if (!user) return <AuthPage onAuth={setUser} />
   
+  if (showBaseline && roadmap && !teaching) {
+    return (
+      <BaselineAssessment
+        goal={goal}
+        level={level}
+        onComplete={(result) => {
+          setBaselineResult(result)
+          setShowBaseline(false)
+          // If they scored high, skip intro modules
+          if (result.skip_modules > 0) {
+            const skipTo = Math.min(result.skip_modules, roadmap.modules.length - 1)
+            setCurrentModuleIdx(skipTo)
+            setCurrentTopicIdx(0)
+          } else {
+            setCurrentModuleIdx(0)
+            setCurrentTopicIdx(0)
+          }
+          setShowPrereqs(true)
+        }}
+        onSkip={() => {
+          setShowBaseline(false)
+          setShowPrereqs(true)
+        }}
+      />
+    )
+  }
+
   if (showPrereqs && roadmap && !teaching) {
     return (
       <div className="min-h-screen" style={{ background: "#FFFFFF" }}>
@@ -365,8 +395,8 @@ export default function App() {
 
           {/* Nova Panel */}
           <div className="nova-panel" style={{
-            width: "320px",
-            minWidth: "320px",
+            width: "400px",
+            minWidth: "400px",
             borderLeft: "1.5px solid #F3F4F6",
             height: "calc(100vh - 64px)",
             position: "sticky",
@@ -708,7 +738,7 @@ export default function App() {
                       Miss Nova is ready to start teaching.
                     </p>
                     <button className="btn-primary" style={{ marginTop: "16px", fontSize: "16px" }}
-                      onClick={() => setShowPrereqs(true)}>
+                      onClick={() => setShowBaseline(true)}>
                       Start learning →
                     </button>
                   </div>

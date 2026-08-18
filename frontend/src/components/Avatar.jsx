@@ -176,7 +176,7 @@ export default function Avatar({ mood = "idle", isSpeaking = false, currentVisem
   return (
     <div style={{
       width: "100%", height: "100%", minHeight: "400px",
-      background: "radial-gradient(120% 90% at 50% 0%, #F5F3FF 0%, #EDE9FE 45%, #E0F2F1 100%)",
+      background: "#FFFFFF",
       position: "relative", overflow: "hidden",
     }}>
       {/* Soft studio glow behind the head */}
