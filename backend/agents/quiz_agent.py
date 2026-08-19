@@ -134,6 +134,10 @@ def clean_json(raw: str) -> str:
     end = raw.rfind("}") + 1
     if start != -1 and end > start:
         raw = raw[start:end]
+    # Strip control characters (tabs, newlines inside strings confuse the parser)
+    raw = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', raw)
+    # Remove trailing commas before } or ] (common model mistake)
+    raw = re.sub(r',\s*([}\]])', r'\1', raw)
     return raw
 
 
