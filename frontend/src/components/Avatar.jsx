@@ -100,9 +100,12 @@ function NovaModel({ moodRef, isSpeakingRef, currentVisemeRef, poseSeedRef, onLo
       else { b.t = 0; b.next = 2 + Math.random() * 3 }
     }
 
-    const viseme = VISEME_MAP[currentVisemeRef.current] || "viseme_sil"
-    const hasViseme = isSpeaking && currentVisemeRef.current > 0
-    const jawTarget = isSpeaking ? (hasViseme ? 0.06 : 0.12 + Math.abs(Math.sin(t * 11)) * 0.3) : 0
+    // Fake viseme sequence — cycles through mouth shapes at speech rhythm
+    const SPEAK_SHAPES = ["viseme_aa", "viseme_E", "viseme_O", "viseme_PP", "viseme_sil"]
+    const speakSlot = Math.floor(t * 4.5) % SPEAK_SHAPES.length
+    const speakShape = SPEAK_SHAPES[speakSlot]
+    const speakIntensity = isSpeaking ? (0.35 + Math.abs(Math.sin(t * 9)) * 0.35) : 0
+    const jawTarget = isSpeaking ? (0.08 + Math.abs(Math.sin(t * 9)) * 0.18) : 0
     const expr = MOOD_TO_EXPRESSION[mood] || {}
 
     meshes.forEach(mesh => {
@@ -118,9 +121,9 @@ function NovaModel({ moodRef, isSpeakingRef, currentVisemeRef, poseSeedRef, onLo
       MANAGED_MORPHS.forEach(name => ease(name, 0, 0.25))
       set("eyeBlinkLeft", blinkVal)
       set("eyeBlinkRight", blinkVal)
-      ease("jawOpen", jawTarget, 0.5)
-      ease("mouthOpen", jawTarget * 0.5, 0.5)
-      if (hasViseme) ease(viseme, 0.6, 0.5)
+      ease("jawOpen", jawTarget, 0.6)
+      ease("mouthOpen", jawTarget * 0.4, 0.6)
+      if (isSpeaking) ease(speakShape, speakIntensity, 0.5)
       Object.entries(expr).forEach(([name, target]) => ease(name, target, 0.1))
     })
   })
