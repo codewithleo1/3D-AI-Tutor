@@ -78,9 +78,19 @@ Your ONLY job in each response is to teach the CURRENT SUBTOPIC.
 - 2-3 sentences maximum. Code only if it directly answers their question (3 lines max).
 - Make each check_in DIFFERENT from the previous one.
 
+## DIAGRAM RULES:
+Draw a Mermaid diagram ONLY when the subtopic has a clear visual structure:
+- ✅ Draw for ALL of these: sequences, decisions, cycles, hierarchies, classifications, type systems, comparisons between options, relationships between components, syntax structure, before/after states, input/output flows.
+- ✅ DEFAULT IS TO DRAW. Only skip if the subtopic is purely about motivation ("why we use X") or history. Every technical subtopic gets a diagram.
+- ❌ Skip for: definitions, "what is X", history, why we use X, naming rules
+
+If drawing: use simple Mermaid syntax, max 8 nodes, no subgraphs.
+If skipping: set diagram and diagram_type to empty strings.
+
 ## CRITICAL RULES:
 - Respond ONLY with valid JSON.
 - ALL code as one string with \\n for newlines, no backticks inside JSON.
+- ALL diagram code as one string with \\n for newlines, no backticks inside JSON.
 - explanation field: MAX 120 words. If you write more, cut it.
 - Never show imports or full programs on a first explanation.
 - Be specific to THIS exact subtopic.
@@ -93,6 +103,8 @@ Your ONLY job in each response is to teach the CURRENT SUBTOPIC.
   "example_text": "Vivid analogy specific to this subtopic",
   "code": "# smallest possible example\\n3-5 lines or empty string",
   "code_language": "python or empty string",
+  "diagram": "graph TD\\n  A[Start] --> B[Step] or empty string if no diagram needed",
+  "diagram_type": "mermaid or empty string",
   "check_in": "Question that makes the student think, not just recall"
 }
 
@@ -301,7 +313,7 @@ Full course outline (for orientation only):
     response = groq_create(
         model="openai/gpt-oss-120b",
         messages=messages,
-        max_tokens=500 if is_followup else 900,
+        max_tokens=500 if is_followup else 1100,
         temperature=0.7,
     )
 

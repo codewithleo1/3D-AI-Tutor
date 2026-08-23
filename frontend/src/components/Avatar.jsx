@@ -3,13 +3,12 @@ import { Canvas, useFrame } from "@react-three/fiber"
 import { useGLTF, useAnimations } from "@react-three/drei"
 
 const MODEL_URL = "/rpm_test.glb"
-// Ready Player Me animation clips (Mixamo-compatible rig) retargeted by bone name.
 const CLIP_URLS = [
-  "/idle_feminine.glb",   // F_Standing_Idle_001            (calm idle)
-  "/anim_idle2.glb",      // F_Standing_Idle_Variations_002 (livelier idle)
-  "/anim_talk1.glb",      // F_Talking_Variations_001       (gesture while talking)
-  "/anim_talk2.glb",      // F_Talking_Variations_002
-  "/anim_talk3.glb",      // F_Talking_Variations_003
+  "/idle_feminine.glb",
+  "/anim_idle2.glb",
+  "/anim_talk1.glb",
+  "/anim_talk2.glb",
+  "/anim_talk3.glb",
 ]
 useGLTF.preload(MODEL_URL)
 CLIP_URLS.forEach(u => useGLTF.preload(u))
@@ -38,7 +37,6 @@ const MANAGED_MORPHS = [
 function NovaModel({ moodRef, isSpeakingRef, currentVisemeRef, poseSeedRef, onLoaded }) {
   const group = useRef()
   const { scene } = useGLTF(MODEL_URL)
-  // Load each clip GLB and merge their AnimationClips into one list.
   const clipGltfs = CLIP_URLS.map(u => useGLTF(u))
   const clips = useMemo(
     () => clipGltfs.flatMap(g => g.animations),
@@ -52,10 +50,9 @@ function NovaModel({ moodRef, isSpeakingRef, currentVisemeRef, poseSeedRef, onLo
 
   const idleName = useMemo(() => names.find(n => n === "F_Standing_Idle_001") || names[0], [names])
   const idle2Name = useMemo(() => names.find(n => n.includes("Idle_Variations")) || idleName, [names, idleName])
-  const talkNames = useMemo(() => names.filter(n => n.includes("Talking")), [names])
 
-  function pickClip(mood, speaking, seed) {
-    if (speaking && talkNames.length) return talkNames[Math.abs(seed) % talkNames.length]
+  // Idle only while speaking — no flying hands
+  function pickClip(mood) {
     if (mood === "happy" || mood === "encouraging") return idle2Name
     return idleName
   }
@@ -73,9 +70,8 @@ function NovaModel({ moodRef, isSpeakingRef, currentVisemeRef, poseSeedRef, onLo
   }, [scene])
 
   useFrame((state, delta) => {
-    // Switch/crossfade body clip based on mood, speaking, and per-topic pose seed.
     if (names.length) {
-      const desired = pickClip(moodRef.current, isSpeakingRef.current, poseSeedRef.current)
+      const desired = pickClip(moodRef.current)
       if (desired && activeRef.current !== desired && actions[desired]) {
         const prev = activeRef.current
         if (prev && actions[prev]) actions[prev].fadeOut(0.4)
@@ -91,6 +87,7 @@ function NovaModel({ moodRef, isSpeakingRef, currentVisemeRef, poseSeedRef, onLo
     const isSpeaking = isSpeakingRef.current
     const mood = moodRef.current
 
+    // Blink
     const b = blink.current
     b.t += delta
     let blinkVal = 0
@@ -100,7 +97,7 @@ function NovaModel({ moodRef, isSpeakingRef, currentVisemeRef, poseSeedRef, onLo
       else { b.t = 0; b.next = 2 + Math.random() * 3 }
     }
 
-    // Fake viseme sequence — cycles through mouth shapes at speech rhythm
+    // Fake viseme lip sync — cycles mouth shapes at speech rhythm
     const SPEAK_SHAPES = ["viseme_aa", "viseme_E", "viseme_O", "viseme_PP", "viseme_sil"]
     const speakSlot = Math.floor(t * 4.5) % SPEAK_SHAPES.length
     const speakShape = SPEAK_SHAPES[speakSlot]
@@ -130,7 +127,6 @@ function NovaModel({ moodRef, isSpeakingRef, currentVisemeRef, poseSeedRef, onLo
 
   return (
     <group ref={group}>
-      {/* Head-and-shoulders framing */}
       <primitive object={scene} scale={1.0} position={[0, -1.55, 0]} rotation={[0, 0, 0]} />
     </group>
   )
@@ -145,7 +141,6 @@ const AvatarCanvas = React.memo(function AvatarCanvas(props) {
       gl={{ preserveDrawingBuffer: true }}
       frameloop="always"
     >
-      {/* Studio lighting: key + fill + cool rim from behind */}
       <ambientLight intensity={1.05} />
       <directionalLight position={[2, 3, 4]} intensity={1.35} />
       <directionalLight position={[-2, 1, 2]} intensity={0.45} />
@@ -182,19 +177,16 @@ export default function Avatar({ mood = "idle", isSpeaking = false, currentVisem
       background: "#FFFFFF",
       position: "relative", overflow: "hidden",
     }}>
-      {/* Soft studio glow behind the head */}
       <div style={{
         position: "absolute", inset: 0, pointerEvents: "none",
         background: "radial-gradient(42% 34% at 50% 34%, rgba(255,255,255,0.85), rgba(255,255,255,0) 70%)",
       }} />
-      {/* Subtle grounding shadow under the bust */}
       <div style={{
         position: "absolute", left: "50%", bottom: "18px", transform: "translateX(-50%)",
         width: "62%", height: "26px", borderRadius: "50%",
         background: "radial-gradient(ellipse at center, rgba(76,29,149,0.18), rgba(76,29,149,0) 70%)",
         filter: "blur(3px)", pointerEvents: "none",
       }} />
-
       {!loaded && (
         <div style={{
           position: "absolute", inset: 0, display: "flex",
@@ -205,7 +197,6 @@ export default function Avatar({ mood = "idle", isSpeaking = false, currentVisem
           Loading Miss Nova…
         </div>
       )}
-
       <div style={{ position: "absolute", inset: 0 }}>
         <AvatarCanvas
           moodRef={moodRef}
@@ -215,7 +206,6 @@ export default function Avatar({ mood = "idle", isSpeaking = false, currentVisem
           onLoaded={handleLoaded}
         />
       </div>
-
       <div style={{
         position: "absolute", bottom: "8px", left: 0, right: 0,
         textAlign: "center", fontSize: "11px", fontWeight: 700,

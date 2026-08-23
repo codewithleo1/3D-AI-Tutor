@@ -49,32 +49,70 @@ export function useSpeech() {
     return () => synth.removeEventListener("voiceschanged", pickVoice);
   }, []);
 
+  function cleanForSpeech(text) {
+    return text
+      .replace(/`/g, "")                        // backticks
+      .replace(/\*\*/g, "")                      // bold markdown
+      .replace(/\*/g, "")                        // italic markdown
+      .replace(/_/g, "")                         // underscores
+      .replace(/<([^>]+)>/g, " $1 ")             // <variable> → variable
+      .replace(/[<>]/g, "")                      // stray angle brackets
+      .replace(/\(\)/g, "")                      // empty parens: range() → range
+      .replace(/\(([^)]+)\)/g, " $1 ")           // range(5) → range 5
+      .replace(/\[([^\]]+)\]/g, " $1 ")          // [item] → item
+      .replace(/\{([^}]+)\}/g, " $1 ")           // {key} → key
+      .replace(/→|->|=>|<-/g, " to ")            // arrows → "to"
+      .replace(/!=/g, " not equal to ")          // != 
+      .replace(/==/g, " equals ")                // ==
+      .replace(/>=|<=/g, " or equal to ")        // >= <=
+      .replace(/[#@$%^&]/g, "")                  // misc symbols
+      .replace(/\s+/g, " ")                      // collapse extra spaces
+      .trim()
+  }
+
   const speak = useCallback((text) => {
     const synth = window.speechSynthesis;
     if (!synth || !text) return;
 
     synth.cancel();
 
-    const utterance = new SpeechSynthesisUtterance(text);
+    // Split into sentences for natural pacing with pauses between
+    const cleaned = cleanForSpeech(text)
+    const sentences = cleaned.match(/[^.!?]+[.!?]+/g) || [cleaned]
 
-    if (voiceRef.current) {
-      utterance.voice = voiceRef.current;
-    }
+    sentences.forEach((sentence, idx) => {
+      const utterance = new SpeechSynthesisUtterance(sentence.trim())
 
-    utterance.rate = 0.92;
-    utterance.pitch = 1.08;
-    utterance.volume = 1.0;
+      if (voiceRef.current) utterance.voice = voiceRef.current
 
-    utterance.onstart = () => setIsSpeaking(true);
-    utterance.onend = () => { setIsSpeaking(false); setCurrentViseme(0); };
-    utterance.onerror = () => { setIsSpeaking(false); setCurrentViseme(0); };
-    utterance.onboundary = (e) => {
-      if (e.name === "word") {
-        setCurrentViseme(prev => (prev % 14) + 1);
+      // Slightly slower for longer sentences (harder content)
+      const wordCount = sentence.trim().split(" ").length
+      utterance.rate = wordCount > 15 ? 0.85 : 0.92
+      utterance.pitch = 1.08
+      utterance.volume = 1.0
+
+      if (idx === 0) utterance.onstart = () => setIsSpeaking(true)
+
+      // Reset viseme to 0 at end of EVERY sentence — closes mouth during gaps
+      utterance.onend = () => {
+        setCurrentViseme(0)
+        if (idx === sentences.length - 1) {
+          setIsSpeaking(false)
+        }
       }
-    };
+      utterance.onerror = () => { setIsSpeaking(false); setCurrentViseme(0) }
 
-    synth.speak(utterance);
+      // Open mouth only on word boundaries — closes between words
+      utterance.onboundary = (e) => {
+        if (e.name === "word") {
+          setCurrentViseme(prev => (prev % 14) + 1)
+          // Reset after 300ms — mouth closes between words
+          setTimeout(() => setCurrentViseme(0), 300)
+        }
+      }
+
+      synth.speak(utterance)
+    })
   }, []);
 
   const stop = useCallback(() => {

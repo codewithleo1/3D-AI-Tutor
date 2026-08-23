@@ -4,6 +4,20 @@ import Editor from "@monaco-editor/react"
 
 const API = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000/api"
 
+async function fetchDiagram(mermaidCode) {
+  try {
+    const res = await fetch("https://kroki.io/mermaid/svg", {
+      method: "POST",
+      headers: { "Content-Type": "text/plain" },
+      body: mermaidCode,
+    })
+    if (!res.ok) return null
+    return await res.text()
+  } catch {
+    return null
+  }
+}
+
 function buildRoadmapOutline(course) {
   if (!course?.modules) return []
   return course.modules.map(mod => ({
@@ -16,7 +30,7 @@ function renderExplanation(text) {
   if (!text) return null
   return text.split("\n\n").map((para, i) => (
     <p key={i} style={{ marginBottom: "14px" }}>
-      {para.replace(/_/g, "").replace(/\*\*/g, "").replace(/\*/g, "")}
+      {para.replace(/_/g, "").replace(/\*\*/g, "").replace(/\*/g, "").replace(/`/g, "")}
     </p>
   ))
 }
@@ -48,6 +62,7 @@ export default function TopicView({
   const [practiceEval, setPracticeEval] = useState(null)
   const [practiceEvalLoading, setPracticeEvalLoading] = useState(false)
   const [phase, setPhase] = useState("loading")
+  const [diagramSvg, setDiagramSvg] = useState(null)
 
   // Reset everything when topic changes
   useEffect(() => {
@@ -60,10 +75,15 @@ export default function TopicView({
 
  // Speak when new teaching arrives
   useEffect(() => {
-    const text = (teaching?.explanation || teaching?.answer || "").replace(/_/g, "").replace(/\*\*/g, "").replace(/\*/g, "")
+    const text = teaching?.explanation || teaching?.answer || ""
     if (!text) return
     const timer = setTimeout(() => speak(text), 100)
     return () => clearTimeout(timer)
+  }, [teaching])
+
+    useEffect(() => {
+    if (!teaching?.diagram) { setDiagramSvg(null); return }
+    fetchDiagram(teaching.diagram.replace(/\\n/g, "\n")).then(setDiagramSvg)
   }, [teaching])
 
   // Avatar mood
@@ -443,6 +463,23 @@ export default function TopicView({
                       {renderExplanation(msg.data.explanation || msg.data.answer || "")}
                     </div>
                   </div>
+
+                  {/* Diagram — only when Nova decides it helps */}
+                  {msg.data.diagram && diagramSvg && (
+                    <div style={{
+                      background: "#F8FAFF", border: "1.5px solid #C4B5FD",
+                      borderRadius: "20px", padding: "24px", marginBottom: "16px"
+                    }}>
+                      <p style={{ fontSize: "12px", fontWeight: 700, color: "#7C3AED",
+                        letterSpacing: "1px", marginBottom: "16px" }}>
+                        📊 DIAGRAM
+                      </p>
+                      <div
+                        dangerouslySetInnerHTML={{ __html: diagramSvg }}
+                        style={{ width: "100%", overflowX: "auto" }}
+                      />
+                    </div>
+                  )}
 
                   {/* Analogy */}
                   {msg.data.example_text && (
