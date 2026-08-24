@@ -82,6 +82,7 @@ export default function App() {
   const [showPaymentGate, setShowPaymentGate] = useState(false)
   const [showBaseline, setShowBaseline] = useState(false)
   const [baselineResult, setBaselineResult] = useState(null)
+  const [showCompletion, setShowCompletion] = useState(false)
   
   
 
@@ -203,10 +204,7 @@ export default function App() {
         setCurrentTopicIdx(0)
       } else {
         setTeaching(false)
-        setFinalized(false)
-        setRoadmap(null)
-        clearProgress()
-        alert("🎉 You completed the entire course! Amazing work.")
+        setShowCompletion(true)
       }
     }
   }
@@ -409,6 +407,118 @@ export default function App() {
           </div>
         </div>
 
+      </div>
+    )
+  }
+
+  // ─── COURSE COMPLETION ───────────────────────────────────────
+  if (showCompletion && roadmap) {
+    return (
+      <div className="min-h-screen" style={{
+        background: "linear-gradient(135deg, #7C3AED 0%, #10B981 100%)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        padding: "24px"
+      }}>
+        <div style={{
+          background: "#FFFFFF", borderRadius: "32px",
+          padding: "64px 48px", maxWidth: "560px", width: "100%",
+          textAlign: "center", boxShadow: "0 32px 80px rgba(0,0,0,0.2)"
+        }}>
+          {/* Confetti emoji row */}
+          <div style={{ fontSize: "48px", marginBottom: "8px" }}>
+            🎉🏆🎓
+          </div>
+
+          <h1 style={{
+            fontSize: "40px", fontWeight: 800, color: "#111827",
+            fontFamily: "Plus Jakarta Sans, sans-serif",
+            marginBottom: "12px", lineHeight: 1.2
+          }}>
+            You did it!
+          </h1>
+
+          <p style={{
+            fontSize: "18px", color: "#6B7280",
+            marginBottom: "32px", lineHeight: 1.6
+          }}>
+            You completed the entire course
+          </p>
+
+          {/* Course title badge */}
+          <div style={{
+            background: "linear-gradient(135deg, #7C3AED, #10B981)",
+            borderRadius: "16px", padding: "20px 32px", marginBottom: "32px",
+            display: "inline-block"
+          }}>
+            <p style={{
+              fontSize: "11px", fontWeight: 700, color: "rgba(255,255,255,0.7)",
+              letterSpacing: "2px", marginBottom: "6px"
+            }}>
+              COURSE COMPLETED
+            </p>
+            <p style={{
+              fontSize: "20px", fontWeight: 800, color: "#FFFFFF"
+            }}>
+              {roadmap.title}
+            </p>
+          </div>
+
+          {/* Stats row */}
+          <div style={{
+            display: "flex", gap: "16px", marginBottom: "40px"
+          }}>
+            {[
+              { label: "Modules", value: roadmap.modules.length },
+              { label: "Topics", value: totalTopics },
+              { label: "Hours", value: roadmap.estimated_hours },
+            ].map(stat => (
+              <div key={stat.label} style={{
+                flex: 1, background: "#F9FAFB",
+                borderRadius: "16px", padding: "20px 12px",
+                border: "1.5px solid #E5E7EB"
+              }}>
+                <p style={{
+                  fontSize: "32px", fontWeight: 800,
+                  background: "linear-gradient(135deg, #7C3AED, #10B981)",
+                  WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent"
+                }}>
+                  {stat.value}
+                </p>
+                <p style={{ fontSize: "12px", color: "#6B7280", fontWeight: 600 }}>
+                  {stat.label}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          {/* Actions */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+            <button
+              className="btn-success"
+              style={{ fontSize: "16px", padding: "16px" }}
+              onClick={() => {
+                setShowCompletion(false)
+                setFinalized(false)
+                setRoadmap(null)
+                clearProgress()
+                window.scrollTo({ top: 0, behavior: "smooth" })
+              }}>
+              🚀 Start a new course
+            </button>
+            <button
+              style={{
+                padding: "14px", borderRadius: "12px", fontWeight: 600,
+                fontSize: "14px", background: "#F3F4F6", color: "#6B7280",
+                border: "1.5px solid #E5E7EB", cursor: "pointer"
+              }}
+              onClick={() => {
+                setShowCompletion(false)
+                setTeaching(true)
+              }}>
+              ← Review the course
+            </button>
+          </div>
+        </div>
       </div>
     )
   }
