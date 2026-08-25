@@ -10,6 +10,7 @@ import AuthPage from "./pages/AuthPage"
 import PaymentGate from "./pages/PaymentGate"
 import { useSpeech } from "./hooks/useSpeech"
 import BaselineAssessment from "./pages/BaselineAssessment"
+import AnimationTest from "./pages/AnimationTest"
 
 
 const API = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000/api"
@@ -221,7 +222,12 @@ export default function App() {
     ? roadmap.modules.slice(0, currentModuleIdx).reduce((a, m) => a + m.topics.length, 0) + currentTopicIdx
     : 0
   
+  // TEMP: animation test — remove before deploy
+  if (window.location.hash === "#animtest") return <AnimationTest />
   
+  // TEMP: animation test — remove before deploy
+  if (window.location.hash === "#animtest") return <AnimationTest />
+
   // ─── PREREQUISITES SCREEN ────────────────────────────────────
   if (authLoading) return (
     <div style={{ display: "flex", alignItems: "center",
