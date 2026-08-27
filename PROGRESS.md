@@ -7,11 +7,10 @@
 ## Project Overview
 **Name:** Miss Nova — AI Learning Companion  
 **Repo:** `codewithleo1/3D-AI-Tutor`  
-**Stack:** React + Vite + Tailwind (frontend) · FastAPI + uv (backend) · Groq LLaMA 3.3-70B · Neon PostgreSQL  
+**Stack:** React + Vite + Tailwind (frontend) · FastAPI + uv (backend) · Groq openai/gpt-oss-120b · Neon PostgreSQL  
 **Goal:** A 3D AI tutor that generates personalized learning roadmaps and teaches each topic with a chat-style teaching flow + quiz system
 
 ---
-
 
 ## Deployment (Live)
 - Frontend: https://3-d-ai-tutor.vercel.app
@@ -23,8 +22,8 @@
 
 ## Current Status
 
-Last worked on: August 12, 2026
-Next session goal: Phase B voice loop — auto-listen after Nova speaks (silence detection + echo suppression)
+Last worked on: August 27, 2026
+Next session goal: Fix returning paid users seeing payment gate again on refresh
 
 ---
 
@@ -33,16 +32,17 @@ Next session goal: Phase B voice loop — auto-listen after Nova speaks (silence
 | Layer | Tool | Decision |
 |---|---|---|
 | Frontend | React + Vite + Tailwind | ✅ Done |
-| LLM | Groq LLaMA 3.3-70b | ✅ Done |
-| TTS | Web Speech API | ✅ Decided |
-| Voice Input | Groq Whisper | 🔒 Phase 4 |
-| 3D Avatar | Ready Player Me + Three.js | 🔒 Phase 3 |
+| LLM | Groq openai/gpt-oss-120b | ✅ Migrated from llama-3.3-70b-versatile (deprecated Aug 16 2026) |
+| TTS | Web Speech API | ✅ Done |
+| Voice Input | Groq Whisper | ✅ Done |
+| 3D Avatar | Ready Player Me + Three.js | ✅ Done |
 | Database | Neon PostgreSQL (free, unlimited projects) | ✅ Done |
 | Session Memory | localStorage (no Redis needed) | ✅ Done |
-| Hosting FE | Vercel | 🔒 Phase 4 |
-| Hosting BE | Render | 🔒 Phase 4 |
+| Hosting FE | Vercel | ✅ Done |
+| Hosting BE | Render | ✅ Done |
 | Code Editor | Monaco Editor | ✅ Installed |
-| LLM | Groq openai/gpt-oss-120b | Migrated from llama-3.3-70b-versatile (deprecated Aug 16 2026) |
+| Auth | Supabase Auth | ✅ Done |
+| Payments | Razorpay | ✅ Done |
 
 ---
 
@@ -64,237 +64,136 @@ CSS classes defined: `section-card`, `btn-primary`, `btn-success`, `option-btn`,
 ---
 
 ## Phase 0 — Foundation ✅ COMPLETE
-
-- [x] GitHub repo created: `codewithleo1/3D-AI-Tutor`
-- [x] Vite + React frontend scaffold
-- [x] FastAPI backend scaffold with `uv`
-- [x] Tailwind CSS v4 configured via `@tailwindcss/vite`
-- [x] Google Fonts loaded: Plus Jakarta Sans, Inter, JetBrains Mono
-- [x] Brand CSS system in `index.css`
-- [x] CORS configured: `http://localhost:5173` allowed
-- [x] `.gitignore` — excludes `.env`, `node_modules`, `__pycache__`, `.venv`
-- [x] Neon PostgreSQL project created (`miss-nova`, ap-southeast-1)
-- [x] `.env` configured with `DATABASE_URL` + `GROQ_API_KEY`
-- [x] DB connection verified via `/health` endpoint
-
----
-
 ## Phase 1 — Roadmap Builder ✅ COMPLETE
-
-### Backend
-- [x] `POST /api/roadmap` — Groq LLaMA generates structured JSON curriculum
-- [x] `GET /health` — returns `{ status, agent, db }`
-- [x] `backend/agents/roadmap_agent.py` — personalized roadmap from 4 inputs
-- [x] Few-shot example in roadmap prompt for consistent JSON output
-- [x] JSON parse safety — strips markdown fences, handles control characters
-- [x] `backend/db/neon.py` — Neon connection with `RealDictCursor`
-- [x] `backend/routes/chat.py` — roadmap route
-- [x] Pydantic models for request validation
-
-### Frontend
-- [x] 4-question onboarding wizard (single page, progressive unlock)
-  - [x] Section 1: Goal input with Enter key support
-  - [x] Section 2: Level selector (4 options with descriptions)
-  - [x] Section 3: Hours/week range slider with live number display
-  - [x] Section 4: Objective selector (4 options with emoji)
-  - [x] Completed sections show summary + Edit badge — click to reopen
-  - [x] Lock logic: sections unlock in order
-- [x] Roadmap display
-  - [x] Module cards with gradient badge
-  - [x] Topic rows with time estimate
-  - [x] Remove module button
-  - [x] Remove topic button (✕)
-  - [x] Edit hint banner
-- [x] Finalize Roadmap button → triggers prerequisites screen
-- [x] Start over button
+## Phase 2 — LMS Core ✅ COMPLETE
+## Phase 3 — 3D Avatar ✅ COMPLETE (core)
+## Phase 4 — Voice + Polish + Deploy ✅ COMPLETE (core)
 
 ---
 
-## Phase 2 — LMS Core 🔄 IN PROGRESS
+## What's Fully Built ✅
 
-### Backend ✅ COMPLETE
-- [x] `backend/agents/teaching_agent.py` — Miss Nova explains topics
-  - [x] Structured JSON output: explanation, example_text, code, code_language, check_in
-  - [x] Follow-up question handling with conversation history
-  - [x] Ready-for-quiz detection
-  - [x] Robust JSON parsing (handles code blocks with newlines)
-- [x] `backend/agents/quiz_agent.py` — generates and evaluates quizzes
-  - [x] 3 question types: multiple choice, fill-in-the-blank, open-ended
-  - [x] Evaluation: generous marking, per-question feedback
-  - [x] `ready_to_advance` flag (pass = 2/3 correct)
-  - [x] `summary` and `score` in response
-- [x] `backend/agents/prerequisites_agent.py` — setup guide per subject
-  - [x] Tool detection: knows VS Code for Python/JS, DB Browser for SQL, etc.
-  - [x] Zero-install option always included (Colab, sqliteonline.com, browser DevTools)
-  - [x] Verify commands (e.g. `python --version`)
-  - [x] Prior knowledge checklist
-  - [x] `estimated_setup_minutes`
-- [x] `backend/routes/teaching.py` — 4 endpoints:
-  - [x] `POST /api/teach`
-  - [x] `POST /api/quiz/generate`
-  - [x] `POST /api/quiz/evaluate`
-  - [x] `POST /api/prerequisites`
+### Teaching System
+- Subtopic-aware teaching — Nova teaches ONE subtopic at a time
+- Subtopic progress bar with dot indicators
+- Practice exercises with hints + solution + evaluation
+- Quiz system (3 questions, repair flow on fail)
+- Follow-up questions + "Explain differently" button
+- Kroki diagrams — Nova auto-generates Mermaid diagrams when topic has flow/hierarchy/sequence
+- Markdown + symbol stripping for display and TTS
+- Baseline assessment — 5 MCQ, score-based module skip
 
-### Frontend ✅ COMPLETE (Core Loop)
-- [x] `App.jsx` — 3-view state machine
-  - [x] View 1: Onboarding wizard + roadmap builder
-  - [x] View 2: Prerequisites screen
-  - [x] View 3: Teaching mode (sidebar + TopicView)
-  - [x] Progress bar (topics completed / total)
-  - [x] Topic X of Y counter in nav
-  - [x] Back to roadmap button
-  - [x] Course completion alert
-- [x] `src/hooks/useCourseProgress.js` — localStorage progress hook
-  - [x] `initProgress(roadmap)` — create fresh progress
-  - [x] `markTopicComplete(mi, ti, roadmap)` — save completion + advance location
-  - [x] `jumpToTopic(mi, ti)` — navigate without resetting completion
-  - [x] `getTopicState(mi, ti)` → `"locked" | "unlocked" | "current" | "completed"`
-  - [x] `clearProgress()` — wipe on start over
-  - [x] Restore from localStorage on app load — survives page refresh ✅
-- [x] `src/components/Sidebar.jsx`
-  - [x] All modules collapsed/expanded with toggle
-  - [x] Auto-expands current module
-  - [x] Topic lock states: ✅ completed / ▶ current / ○ unlocked / 🔒 locked
-  - [x] Active topic: purple left border + highlighted background
-  - [x] Click completed/unlocked topic → jump to it (free navigation) ✅
-  - [x] Click locked topic → not clickable (opacity 0.4, cursor blocked)
-  - [x] Mini stats at bottom: `X of Y done · %`
-  - [x] Sticky below nav, scrollable
-- [x] `src/components/Prerequisites.jsx`
-  - [x] Calls `POST /api/prerequisites` with goal + level
-  - [x] Tool cards: name, purpose, download link, install steps, verify command
-  - [x] "Mark as installed" checkbox per tool
-  - [x] Zero-install option card (toggleable)
-  - [x] "Good to know before starting" section
-  - [x] First step instruction from Miss Nova
-  - [x] "I'm all set — Start learning →" (disabled until tools checked or zero-install selected)
-  - [x] "Skip setup" button always available
-  - [x] `~X minutes` setup time badge
-- [x] `src/components/TopicView.jsx` — chat-style teaching UI
-  - [x] Teaching phase: explanation + example + code (Monaco) + check-in
-  - [x] Monaco Editor for code examples (syntax highlighted, read-only)
-  - [x] Follow-up question input (ask Miss Nova anything)
-  - [x] "I understand — Take the quiz →" button
-  - [x] Quiz phase: MCQ + fill-blank + open-ended all rendered
-  - [x] Submit answers → evaluation
-  - [x] Results phase: per-question feedback + pass/fail banner
-  - [x] Pass → Next topic button
-  - [x] Fail → Re-study or Retry quiz buttons
-  - [x] Skip topic button
+### Avatar + Voice
+- RPM 3D avatar (rpm_test.glb + idle_feminine.glb + anim_idle2.glb)
+- Idle-only animation while speaking (no flying hands)
+- Fake viseme lipsync — cycles mouth shapes at speech rhythm (timer-based)
+- Eye blink procedural animation
+- Facial expression morph targets per mood (happy/concerned/thinking/explaining)
+- Web Speech API TTS — Google UK English Female
+- cleanForSpeech() strips backticks, parens, angle brackets, arrows, symbols before TTS
+- Sentence-by-sentence TTS with natural pauses between sentences
+- Groq Whisper voice input — mic toggle, auto-submit after transcription
 
-### DB Wiring ✅ COMPLETE
-- [x] Neon schema fixed — courses/progress tables recreated with correct columns
-- [x] Unique constraint on progress(session_id, course_id)
-- [x] POST /api/progress/save-course — creates session + course, returns both IDs
-- [x] POST /api/progress/save — upserts progress on topic complete
-- [x] POST /api/progress/load — loads latest progress by session_id
-- [x] frontend/src/utils/session.js — generates persistent session UUID
-- [x] useCourseProgress.js — initProgress calls DB, markTopicComplete syncs to DB
-- [x] App.jsx — initProgress is async, passes goal + level
+### Auth + Payments
+- Supabase login/signup (AuthPage.jsx)
+- Payment gate after Module 1
+- Two-column UI: Pay Rs.1 (left) vs Promo Code (right)
+- Promo codes: MISSNOVA100, MISSNOVA50, LEARNFREE
+- Razorpay Rs.1 real payment tested and working
+- Payments saved to Neon DB
 
+### Onboarding
+- 4-question onboarding wizard → AI generates personalized roadmap with subtopics
+- Baseline assessment — 5 MCQ generated by Nova, score-based module skip
+- Prerequisites screen with tool setup guide
 
-### Next to Build — Active Learning (Highest Impact)
-- [x] Practice step in `TopicView.jsx` — learner writes answer before quiz
-  - [x] `POST /api/teach { subtopic_type: "practice" }` 
-  - [x] Exercise prompt + text area
-  - [x] "Show hint" button (reveals hints one by one)
-  - [x] "See solution" button
-- [x] Quiz repair logic
-  - [x] On fail: extract `failed_concepts` from quiz evaluation response
-  - [x] `POST /api/teach { subtopic_type: "repair", failed_concepts: [...] }`
-  - [x] Re-explain only failed concepts, then mini retry quiz
-- [x] "Explain differently" button in teaching phase
-  - [x] Sends new history turn requesting a different angle/analogy
-- [x] `subtopic_type` field in `TeachRequest` (backend)
-  - [x] Update `teaching_agent.py` prompts per type
+### Infrastructure
+- Dual Groq API key fallback (429 → switch to client2)
+- Robust JSON parser in all agents (trailing comma + control char stripping)
+- Course completion screen (replaces alert() — shows stats + start new course)
+- Deployed Vercel + Render
+- Neon PostgreSQL (sessions, courses, progress, payments tables)
+
+### Animation Test (Parked — needs Mixamo FBX)
+- AvatarController.jsx + useLipSync.js + useProceduralIdle.js built
+- rpm_test_animated.glb with 6 baked procedural animations (too subtle visually)
+- AnimationTest page at #animtest route
+- Parked until real Mixamo FBX files downloaded from mixamo.com
 
 ---
 
-## Phase 3 — 3D Avatar 🔄 IN PROGRESS
+## What Needs to Be Built (Priority Order)
 
-- [x] Installed three, @react-three/fiber, @react-three/drei
-- [x] Downloaded animated female teacher GLB from Sketchfab (nova.glb)
-- [x] Built Avatar.jsx — loads GLB, plays animations based on mood prop
-- [x] Added right panel (320px) in App.jsx for avatar
-- [x] Avatar reacts to phase changes via onMoodChange callback from TopicView
-- [x] Mood mapping: teaching→explaining, quiz→quiz, pass→happy, fail→concerned
-- [x] Avatar head nod lipsync while isSpeaking (useFrame sine wave on Head_5)
-- [x] Body bones locked to rest position (useFrame override)
-- [x] Replaced nova.glb with RPM avatar (rpm_test.glb) + 5 separate animation GLBs
-- [x] Fixed Intel UHD WebGL context loss — separate GLBs bypass the merged mesh limit
-- [x] Morph targets: 63 blend shapes — mood expressions + 15 visemes + eye blink
-- [x] Lip sync via viseme cycling on word boundaries (useSpeech onboundary event)
-- [x] poseSeed prop varies talking animation per topic
-- [x] debugAvatar mode in main.jsx (?debugAvatar URL param for isolated testing)
-- [x] Avatar live on Vercel — verified rendering on production
-- [x] Avatar background set to white (#FFFFFF) — matches app background
-- [ ] Avatar camera fine-tuned to show hands fully
+### 🔴 Critical Bugs
+1. **Returning paid users see payment gate again on refresh** — courseUnlocked resets on page refresh. Need to check payments table in Neon DB on Supabase login to restore unlock state.
 
----
+### 🟡 High Priority (portfolio impact)
+2. **Mixamo animation upgrade** — download real FBX animations from mixamo.com (Idle, Talking, Explaining, Pointing, Happy, Thinking). Wire into AvatarController.jsx. Will replace current procedural baked clips.
+3. **Certificate PDF** on course completion — student name, course title, date, verify code
+4. **Code execution** — student writes code in Monaco, clicks Run, sees output
 
-## Phase 4 — Voice + Polish + Deploy 🔄 IN PROGRESS
+### 🟠 Medium Priority
+5. Streak counter — days studied in a row, visible in sidebar
+6. Mobile polish — full mobile layout
+7. Confidence rating after each subtopic (1-3 self-report)
+8. Spaced repetition — 7-day review badge in sidebar
 
-- [x] Groq Whisper voice input — mic toggle, auto-submit after transcription
-- [x] Teaching prompt rewritten — chunked Socratic teaching, hook question, topic-type aware
-- [x] Practice prompt rewritten — progressive scaffolding
-- [x] Roadmap generates subtopics per topic (3-6 items, ordered)
-- [ ] Subtopic-aware teaching loop — Nova teaches one subtopic at a time
-- [ ] Dual Groq API key fallback
-- [ ] "Yes I got it" navigates subtopics, quiz only after all subtopics done
-- [ ] Spaced repetition reminders (7-day review badge in sidebar)
-- [ ] Export progress as PDF
-- [ ] Mobile sidebar — hamburger menu, slide-in drawer
-- [x] Deploy frontend to Vercel — https://3-d-ai-tutor.vercel.app
-- [x] Deploy backend to Render — https://miss-nova-backend.onrender.com
-- [ ] README with demo GIF
+### 🟢 Later
+9. Admin dashboard
+10. Dark mode
+11. Note taking per topic
 
 ---
 
-## Actual Folder Structure (as of July 22, 2026)
+## Current File Structure (as of Aug 27, 2026)
 
 ```
 3D-AI-Tutor/
 ├── frontend/
 │   ├── index.html
 │   ├── package.json
-│   ├── package-lock.json
 │   ├── vite.config.js
-│   ├── .env
 │   └── src/
-│       ├── App.jsx                        ✅ auth gate + roadmap + teaching + payment + baseline
+│       ├── App.jsx                        ✅ auth + roadmap + teaching + payment + baseline + completion
 │       ├── index.css                      ✅ brand system
 │       ├── main.jsx                       ✅ React root
 │       ├── components/
-│       │   ├── Avatar.jsx                 ✅ 3D RPM avatar, mood + lipsync + visemes
+│       │   ├── Avatar.jsx                 ✅ RPM avatar, idle anim, fake viseme lipsync, morph expressions
+│       │   ├── AvatarController.jsx       🔒 new controller (parked — needs Mixamo FBX)
 │       │   ├── Prerequisites.jsx          ✅ setup guide screen
 │       │   ├── Sidebar.jsx                ✅ module/topic nav, lock states
-│       │   └── TopicView.jsx              ✅ subtopic teaching + practice + quiz + repair
+│       │   └── TopicView.jsx              ✅ subtopic teaching + Kroki diagrams + practice + quiz + repair
+│       ├── config/
+│       │   └── animations.js              🔒 animation clip config (parked)
 │       ├── hooks/
 │       │   ├── useCourseProgress.js       ✅ localStorage + Neon DB sync
-│       │   └── useSpeech.js               ✅ Web Speech API TTS + Whisper mic
+│       │   ├── useLipSync.js              🔒 amplitude lip sync (parked)
+│       │   ├── useProceduralIdle.js       🔒 breathing + blink (parked)
+│       │   └── useSpeech.js               ✅ TTS + Whisper + cleanForSpeech()
 │       ├── lib/
 │       │   └── supabase.js                ✅ Supabase client
 │       ├── pages/
+│       │   ├── AnimationTest.jsx          🔒 animation test lab (#animtest route, parked)
 │       │   ├── AuthPage.jsx               ✅ Supabase login/signup
-│       │   ├── PaymentGate.jsx            ✅ Razorpay Rs.1 + promo codes
-│       │   └── BaselineAssessment.jsx     ✅ 5 MCQ knowledge check + module skip
+│       │   ├── BaselineAssessment.jsx     ✅ 5 MCQ knowledge check + module skip
+│       │   └── PaymentGate.jsx            ✅ Razorpay Rs.1 + promo codes
 │       └── utils/
+│           ├── retargetMixamoAnimation.js 🔒 Mixamo retargeting util (parked)
 │           └── session.js                 ✅ session UUID generator
 │
 ├── backend/
 │   ├── main.py                            ✅ FastAPI app + CORS + all routers
 │   ├── pyproject.toml                     ✅ uv dependencies
 │   ├── requirements.txt                   ✅ Render deployment dependencies
-│   ├── .env                               ✅ API keys
 │   ├── agents/
 │   │   ├── roadmap_agent.py               ✅ curriculum generation + subtopics
-│   │   ├── teaching_agent.py              ✅ subtopic-aware teaching + practice + repair
-│   │   ├── quiz_agent.py                  ✅ generate + evaluate + repair quiz
+│   │   ├── teaching_agent.py              ✅ subtopic-aware + Kroki diagram generation
+│   │   ├── quiz_agent.py                  ✅ generate + evaluate + repair + robust JSON parser
 │   │   ├── prerequisites_agent.py         ✅ tool setup guide
 │   │   └── baseline_agent.py              ✅ 5 MCQ baseline + score evaluation
 │   ├── db/
 │   │   ├── neon.py                        ✅ PostgreSQL connection
-│   │   └── queries.py                     ✅ DB queries (sessions, courses, progress)
+│   │   └── queries.py                     ✅ DB queries
 │   └── routes/
 │       ├── chat.py                        ✅ POST /api/roadmap
 │       ├── teaching.py                    ✅ POST /api/teach + quiz + prereqs + transcribe
@@ -313,7 +212,7 @@ CSS classes defined: `section-card`, `btn-primary`, `btn-success`, `option-btn`,
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | POST | `/api/roadmap` | Generate personalized roadmap |
-| POST | `/api/teach` | Subtopic-aware teaching |
+| POST | `/api/teach` | Subtopic-aware teaching + Kroki diagram |
 | POST | `/api/quiz/generate` | Generate 3 quiz questions |
 | POST | `/api/quiz/evaluate` | Evaluate quiz answers |
 | POST | `/api/practice` | Generate practice exercise |
@@ -336,47 +235,10 @@ CSS classes defined: `section-card`, `btn-primary`, `btn-success`, `option-btn`,
 ## Neon DB Schema
 
 ```sql
--- User sessions
-sessions (
-    id TEXT PRIMARY KEY,
-    goal TEXT,
-    level TEXT,
-    created_at TIMESTAMP
-)
-
--- Roadmaps per session
-courses (
-    id TEXT PRIMARY KEY,
-    session_id TEXT,
-    roadmap JSONB,
-    created_at TIMESTAMP
-)
-
--- Topic progress
-progress (
-    id SERIAL PRIMARY KEY,
-    session_id TEXT,
-    course_id TEXT,
-    completed_topics JSONB,
-    current_module INTEGER,
-    current_topic INTEGER,
-    updated_at TIMESTAMP,
-    UNIQUE(session_id, course_id)
-)
-
--- Payments
-payments (
-    id SERIAL PRIMARY KEY,
-    user_id TEXT UNIQUE,
-    user_email TEXT,
-    amount_paise INTEGER,
-    promo_code TEXT,
-    status TEXT,
-    razorpay_order_id TEXT,
-    razorpay_payment_id TEXT,
-    paid_at TIMESTAMP,
-    created_at TIMESTAMP
-)
+sessions (id TEXT PRIMARY KEY, goal TEXT, level TEXT, created_at TIMESTAMP)
+courses (id TEXT PRIMARY KEY, session_id TEXT, roadmap JSONB, created_at TIMESTAMP)
+progress (id SERIAL PRIMARY KEY, session_id TEXT, course_id TEXT, completed_topics JSONB, current_module INTEGER, current_topic INTEGER, updated_at TIMESTAMP, UNIQUE(session_id, course_id))
+payments (id SERIAL PRIMARY KEY, user_id TEXT UNIQUE, user_email TEXT, amount_paise INTEGER, promo_code TEXT, status TEXT, razorpay_order_id TEXT, razorpay_payment_id TEXT, paid_at TIMESTAMP, created_at TIMESTAMP)
 ```
 
 ---
@@ -393,31 +255,36 @@ payments (
 | 6 | GitHub push rejected (remote had README) | `git push --force` |
 | 7 | Hook destructuring placed before state declarations in App.jsx | Move all `useState` declarations above hook calls |
 | 8 | Extra closing `</div>` in teaching mode JSX | Teaching mode needs exactly 2 closing divs: flex row + min-h-screen |
-| 9 | `TopicView.jsx` committed to wrong location (`src/` instead of `src/components/`) | `git rm frontend/src/TopicView.jsx` |
-| 10 | create_session called with wrong args (session_id passed as first arg) | DB generates session_id — call create_session(goal, level) only |
+| 9 | `TopicView.jsx` committed to wrong location | `git rm frontend/src/TopicView.jsx` |
+| 10 | create_session called with wrong args | DB generates session_id — call create_session(goal, level) only |
 | 11 | await in onClick without async keyword | onClick={async () => { await ... }} |
 | 12 | Vite serving stale bundle after file edits | Remove-Item -Recurse -Force .vite then Ctrl+Shift+R |
-| 13 | phase useState deleted accidentally causing ReferenceError | Always check useState declarations when adding useEffect that references state |
-| 14 | Math.PI rotation shows model's back | Use rotation={[0, 0, 0]} for front-facing, small values like 0.1 for slight angle |
-| 15 | GLB file in public/ not pushed to git due to size | Add nova.glb explicitly with git add frontend/public/nova.glb |
-| 16 | isSpeaking not defined in App.jsx | Move useSpeech() to App.jsx, pass speak/stop/isSpeaking as props to TopicView |
-| 17 | Avatar body/legs flying off screen | Lock body bones to rest position every frame in useFrame — don't rely on track muting |
-| 18 | LLM returns malformed JSON on follow-ups | Call clean_json() in teach_topic(), not just generate_practice() |
-| 19 | Follow-up history sends full JSON blob | Send teaching.explanation || teaching.answer as assistant history content |
+| 13 | phase useState deleted accidentally | Always check useState declarations when adding useEffect |
+| 14 | Math.PI rotation shows model's back | Use rotation={[0, 0, 0]} for front-facing |
+| 15 | GLB file in public/ not pushed to git | Add explicitly with git add frontend/public/nova.glb |
+| 16 | isSpeaking not defined in App.jsx | Move useSpeech() to App.jsx, pass as props |
+| 17 | Avatar body/legs flying off screen | Lock body bones to rest position every frame in useFrame |
+| 18 | LLM returns malformed JSON on follow-ups | Call clean_json() in teach_topic() |
+| 19 | Follow-up history sends full JSON blob | Send teaching.explanation as assistant history content |
 | 20 | TTS speaks wrong voice after refactor | Add female-specific voice names to preferred list in useSpeech.js |
-| 21 | Avatar.jsx copy-paste from chat left old nova.glb reference | Use Invoke-WebRequest to pull file directly from GitHub — never copy-paste GLB-dependent code |
-| 22 | useMemo with clipGltfs.map() as deps array causes constant re-evaluation | Use eslint-disable-next-line comment with empty [] deps array for stable clip list |
-| 23 | Prompt rewrite caused 500 errors | Keep same JSON response structure — only change instructions, not field names |
+| 21 | PowerShell Set-Content overwrote file with Python content | Use Invoke-WebRequest to restore from GitHub |
+| 22 | GROQ_API_KEY renamed to GROQ_API_KEY_1 | Use Select-String across all agent files before restarting |
+| 23 | Prompt rewrite caused 500 errors | Keep same JSON response structure — only change instructions |
 | 24 | TTS speaks underscores literally | Strip underscores before passing text to speak() |
 | 25 | git push fails with "Could not resolve host" | Temporary DNS issue — wait 30 seconds and retry |
-| 21 | PowerShell Set-Content overwrote TopicView.jsx with Python content | Always specify backend path explicitly; use Invoke-WebRequest to restore from GitHub |
-| 22 | GROQ_API_KEY renamed to GROQ_API_KEY_1 — all agents must be updated | Use Select-String across all agent files before restarting |
-| 26 | llama-3.3-70b-versatile deprecated Aug 16 2026 | Migrate to openai/gpt-oss-120b — same Groq API key, just model name change |
-| 27 | openai/gpt-oss-120b returns markdown asterisks in explanations | Strip ** and * in renderExplanation() and TTS speak() calls |
-| 28 | New model returns JSON with syntax errors (missing commas) | Add robust JSON repair in all agent files — strip trailing commas, fix {}{} patterns |
-| 29 | razorpay not in requirements.txt — Render deploy fails | Always add new pip packages to both pyproject.toml AND requirements.txt |
-| 30 | Avatar looks up too much sometimes | Camera angle issue — fix in future session |
-| 31 | Avatar hands cut off at right edge of panel | Increase nova panel width + shift camera right with position [0.15, -0.2, 4.2] |
+| 26 | llama-3.3-70b-versatile deprecated Aug 16 2026 | Migrate to openai/gpt-oss-120b |
+| 27 | openai/gpt-oss-120b returns markdown asterisks | Strip ** and * in renderExplanation() and TTS speak() |
+| 28 | New model returns JSON with syntax errors | Add robust JSON repair in all agents — trailing commas + control chars |
+| 29 | razorpay not in requirements.txt — Render deploy fails | Always add to BOTH pyproject.toml AND requirements.txt |
+| 30 | Avatar looks up too much | rotation={[-0.08, 0, 0]} on primitive — or leave at [0,0,0] for stable look |
+| 31 | Avatar hands cut off | Increase nova panel width + adjust camera |
+| 32 | TTS reads backticks/symbols as words | cleanForSpeech() in useSpeech.js strips all symbols |
+| 33 | Kroki diagrams not appearing | LLM needs "DEFAULT IS TO DRAW" rule — list-based rules too restrictive |
+| 34 | rpm_test_animated.glb animations not playing visibly | Baked procedural rotations too subtle — need real Mixamo FBX files |
+| 35 | idle2 clip causes Nova to look down | Use idleName only while speaking — idle2 bends upper body forward |
+| 36 | Talk clips cause flying hands | Use idle-only while speaking — jaw/mouth lipsync shows she's talking |
+| 37 | Duplicate import in App.jsx causes parse error | Check for duplicate imports before saving |
+
 ---
 
 ## Coding Rules (Follow Every Session)
@@ -440,17 +307,17 @@ payments (
 
 | Date | What was done | Commits |
 |------|--------------|---------|
-| July 21, 2026 | Phase 0 complete. Backend + frontend scaffold. Neon DB connected. Schema deployed. | — |
-| July 21, 2026 | Phase 1 complete. Roadmap agent working. Onboarding UI built. Roadmap display with edit/remove. | — |
-| July 22, 2026 | Phase 2 backend complete. Teaching agent + quiz agent + prerequisites agent. Basic TopicView built. Monaco Editor. | eb723cd |
-| July 22, 2026 | Phase 2 frontend: localStorage persistence, Sidebar with lock states + jump nav, Prerequisites screen, 3-view routing in App.jsx | 9420f8a |
-| July 24, 2026 | Neon DB schema migration, backend route fixes, frontend DB wiring, progress syncs end-to-end | b335840, 7e75bed |
-| July 26, 2026 | Neon DB wiring complete, cross-device restore, conversation UI, understanding gate, deployed to Vercel + Render, 3D avatar built with Three.js + React Three Fiber | multiple commits |
-| July 29, 2026 | TTS with Web Speech API, lipsync head nod, body bone locking, follow-up fix, teaching_agent clean_json fix | multiple commits |
-| Aug 12, 2026 | RPM avatar merged to main — separate GLBs, morph targets, lip sync, mood expressions, poseSeed, debugAvatar mode. Fixed Intel UHD WebGL issue. Verified live on Vercel. | 6e6dbae |
-| Aug 12, 2026 | Voice input complete — Groq Whisper /api/transcribe endpoint, mic toggle in TopicView, auto-submit after transcription. Full loop: speak → transcribe → Nova responds + speaks. | ce7cfe0 |
-| Aug 13, 2026 | Teaching prompt rewritten (chunked, hook, no code dump). Practice prompt rewritten. Roadmap generates subtopics. Voice auto-submit. Italics fix. Subtopic architecture designed. | 36dce6c |
-| Aug 15, 2026 | Subtopic-aware teaching, progress bar, dot indicators, dual Groq key fallback, deployed to Render | ec7d869, 441884b, 9b45443, 26ee3e4, 67bbf63 |
-| Aug 16, 2026 | Supabase auth (login/signup), Razorpay Rs.1 payment gate, promo codes (MISSNOVA100/50/LEARNFREE), two-column payment UI, payments saved to Neon DB, real payment tested end-to-end | b532745, 1980b17, 3e9e359 |
-| Aug 17, 2026 | Migrated all agents to openai/gpt-oss-120b (llama-3.3-70b-versatile deprecated). Fixed razorpay in requirements.txt for Render. Built baseline assessment (5 MCQ, score-based module skip). Fixed markdown asterisks in TopicView. Robust JSON parser for new model. Render redeployed successfully. | d2fd18e |
-| Aug 17, 2026 | Avatar background white, camera adjusted to show hands, panel width 360px. Quiz JSON parser pending. | local only |
+| July 21, 2026 | Phase 0 complete. Backend + frontend scaffold. Neon DB connected. | — |
+| July 21, 2026 | Phase 1 complete. Roadmap agent working. Onboarding UI built. | — |
+| July 22, 2026 | Phase 2 backend complete. Teaching + quiz + prerequisites agents. | eb723cd |
+| July 22, 2026 | Phase 2 frontend: localStorage, Sidebar, Prerequisites, 3-view routing | 9420f8a |
+| July 24, 2026 | Neon DB schema migration, backend route fixes, DB wiring | b335840, 7e75bed |
+| July 26, 2026 | Neon DB wiring, cross-device restore, deployed to Vercel + Render, 3D avatar | multiple |
+| July 29, 2026 | TTS, lipsync head nod, body bone locking, follow-up fix | multiple |
+| Aug 12, 2026 | RPM avatar — separate GLBs, morph targets, lip sync, mood expressions | 6e6dbae |
+| Aug 12, 2026 | Voice input — Groq Whisper /api/transcribe, mic toggle, auto-submit | ce7cfe0 |
+| Aug 13, 2026 | Teaching prompt rewritten, subtopics, roadmap subtopic generation | 36dce6c |
+| Aug 15, 2026 | Subtopic-aware teaching, progress bar, dual Groq key, deployed | ec7d869+ |
+| Aug 16, 2026 | Supabase auth, Razorpay payment gate, promo codes, real payment tested | b532745+ |
+| Aug 17, 2026 | Migrated to gpt-oss-120b, baseline assessment, markdown fix, robust JSON | d2fd18e |
+| Aug 27, 2026 | Quiz agent JSON parser fixed, Kroki diagrams, fake viseme lipsync, TTS cleanForSpeech(), sentence-by-sentence TTS, course completion screen, animation test lab (parked) | ddae005, 32eaa04, 20dd6a0 |
