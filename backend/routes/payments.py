@@ -141,3 +141,22 @@ def _save_payment(user_id, user_email, amount, promo_code,
     conn.commit()
     cur.close()
     conn.close()
+
+
+@router.get("/payments/status")
+def check_payment_status(user_id: str):
+    """Check if a user has already paid. Called on login to restore courseUnlocked."""
+    conn = get_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT id FROM payments WHERE user_id = %s LIMIT 1",
+            (user_id,)
+        )
+        row = cur.fetchone()
+        cur.close()
+        return {"has_paid": row is not None}
+    except Exception:
+        return {"has_paid": False}
+    finally:
+        conn.close()

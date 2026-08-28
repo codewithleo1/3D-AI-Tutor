@@ -10,5 +10,12 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 
 
 def get_connection():
-    """Get a connection to the Neon database."""
-    return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
+    """Get a connection to the Neon database with SSL retry."""
+    try:
+        conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
+        # Test the connection is alive
+        conn.cursor().execute("SELECT 1")
+        return conn
+    except psycopg2.OperationalError:
+        # Neon dropped the connection — retry once with a fresh connection
+        return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)

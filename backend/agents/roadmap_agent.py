@@ -185,8 +185,9 @@ Remember: Each topic must cover EXACTLY ONE concept. Never combine concepts. Eve
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": user_message},
         ],
-        max_tokens=4000,
+        max_tokens=6000,
         temperature=0.7,
+        response_format={"type": "json_object"},
     )
 
     raw = response.choices[0].message.content.strip()
@@ -208,18 +209,28 @@ Remember: Each topic must cover EXACTLY ONE concept. Never combine concepts. Eve
     if start != -1 and end > start:
         raw = raw[start:end]
 
+
+    import re
+
+    def robust_parse(s):
+        # 1. Remove trailing commas before ] or }
+        s = re.sub(r',\s*([}\]])', r'\1', s)
+        # 2. Fix unescaped newlines inside string values
+        s = re.sub(r'(?<!\\)\n', ' ', s)
+        s = re.sub(r'(?<!\\)\r', ' ', s)
+        # 3. Strip control characters except standard whitespace
+        s = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', s)
+        # 4. Fix missing commas between } and {
+        s = re.sub(r'}\s*{', '},{', s)
+        return s
+
     try:
         return json.loads(raw)
     except json.JSONDecodeError:
-        # Try fixing common issues
-        import re
-        # Remove trailing commas before ] or }
-        raw = re.sub(r',\s*([}\]])', r'\1', raw)
-        # Fix missing commas between } and {
-        raw = re.sub(r'}\s*{', '},{', raw)
+        raw = robust_parse(raw)
         try:
             return json.loads(raw)
         except json.JSONDecodeError:
-            # Strip control characters and try again
-            raw = re.sub(r'[\x00-\x1f\x7f]', ' ', raw)
+            # Last resort — collapse all whitespace inside strings
+            raw = re.sub(r'\s+', ' ', raw)
             return json.loads(raw)

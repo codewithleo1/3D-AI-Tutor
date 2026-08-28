@@ -80,6 +80,7 @@ export default function App() {
   const [showPrereqs, setShowPrereqs] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [courseUnlocked, setCourseUnlocked] = useState(false)
+  const courseUnlockedRef = useRef(false)
   const [showPaymentGate, setShowPaymentGate] = useState(false)
   const [showBaseline, setShowBaseline] = useState(false)
   const [baselineResult, setBaselineResult] = useState(null)
@@ -105,6 +106,26 @@ export default function App() {
     jumpToTopic,
     clearProgress,
   } = useCourseProgress()
+
+
+  // Restore payment status from DB on login
+  useEffect(() => {
+    if (!user) return
+    async function checkPayment() {
+      try {
+        const res = await axios.get(`${API}/payments/status`, {
+          params: { user_id: user.id }
+        })
+        if (res.data.has_paid) {
+          setCourseUnlocked(true)
+          courseUnlockedRef.current = true
+        }
+      } catch {
+        // Silently fail — user can still pay again
+      }
+    }
+    checkPayment()
+  }, [user])
 
   // Restore from localStorage on app load
   useEffect(() => {
@@ -180,6 +201,7 @@ export default function App() {
     setOpenSection(1); setTeaching(false)
     setCurrentModuleIdx(0); setCurrentTopicIdx(0)
     setCourseUnlocked(false)
+    courseUnlockedRef.current = false
     setShowPaymentGate(false)
     setShowPrereqs(false)
     clearProgress()
@@ -196,7 +218,7 @@ export default function App() {
       const nextModuleIdx = currentModuleIdx + 1
       if (nextModuleIdx < roadmap.modules.length) {
         // Payment gate after module 1
-        if (nextModuleIdx === 1 && !courseUnlocked) {
+        if (nextModuleIdx === 1 && !courseUnlockedRef.current) {
           setTeaching(false)
           setShowPaymentGate(true)
           return
@@ -216,10 +238,10 @@ export default function App() {
 
   // Total topics for progress bar
   const totalTopics = roadmap
-    ? roadmap.modules.reduce((a, m) => a + m.topics.length, 0)
+    ? roadmap.modules.reduce((a, m) => a + (m.topics?.length || 0), 0)
     : 0
   const completedTopics = roadmap
-    ? roadmap.modules.slice(0, currentModuleIdx).reduce((a, m) => a + m.topics.length, 0) + currentTopicIdx
+    ? roadmap.modules.slice(0, currentModuleIdx).reduce((a, m) => a + (m.topics?.length || 0), 0) + currentTopicIdx
     : 0
   
   // TEMP: animation test — remove before deploy
@@ -302,6 +324,7 @@ export default function App() {
         courseTitle={roadmap.title}
         onUnlock={() => {
           setCourseUnlocked(true)
+          courseUnlockedRef.current = true
           setShowPaymentGate(false)
           setCurrentModuleIdx(1)
           setCurrentTopicIdx(0)
