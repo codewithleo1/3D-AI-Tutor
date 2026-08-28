@@ -81,6 +81,9 @@ export default function AuthPage({ onAuth }) {
                   color: "#111827", outline: "none", fontFamily: "Inter, sans-serif"
                 }}
               />
+              <p style={{ fontSize: "12px", color: "#7C3AED", marginTop: "6px", fontWeight: 500 }}>
+                🏆 This name will appear on your certificate of completion
+              </p>
             </div>
           )}
 

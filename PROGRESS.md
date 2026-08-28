@@ -101,6 +101,12 @@ CSS classes defined: `section-card`, `btn-primary`, `btn-success`, `option-btn`,
 - Promo codes: MISSNOVA100, MISSNOVA50, LEARNFREE
 - Razorpay Rs.1 real payment tested and working
 - Payments saved to Neon DB
+- Certificate PDF generation (reportlab + qrcode) with dark royal design
+- QR code linking to public verify page
+- LinkedIn "Add to Profile" pre-fill with one click
+- Copy verify link button
+- Public verify page at /verify?code=UUID
+- React Router installed, BrowserRouter wrapping app
 
 ### Onboarding
 - 4-question onboarding wizard → AI generates personalized roadmap with subtopics
@@ -129,7 +135,7 @@ CSS classes defined: `section-card`, `btn-primary`, `btn-success`, `option-btn`,
 
 ### 🟡 High Priority (portfolio impact)
 2. **Mixamo animation upgrade** — download real FBX animations from mixamo.com (Idle, Talking, Explaining, Pointing, Happy, Thinking). Wire into AvatarController.jsx. Will replace current procedural baked clips.
-3. **Certificate PDF** on course completion — student name, course title, date, verify code
+3. ✅ **Certificate PDF** on course completion — DONE Aug 28
 4. **Code execution** — student writes code in Monaco, clicks Run, sees output
 
 ### 🟠 Medium Priority
@@ -287,6 +293,8 @@ payments (id SERIAL PRIMARY KEY, user_id TEXT UNIQUE, user_email TEXT, amount_pa
 | 38 | Neon drops idle connections after ~5 min — SSL EOF error | Add reconnect retry in get_connection() — catch OperationalError and reconnect once |
 | 39 | React state captured in callbacks is stale (courseUnlocked always false) | Use useRef alongside useState for values read inside event handlers |
 | 40 | Old localStorage roadmap has modules with undefined topics — crashes on .length | Use m.topics?.length || 0 everywhere roadmap is reduced |
+| 41 | reportlab drawInlineImage() rejects BytesIO — pass PIL Image directly | qrcode.make() returns PIL Image — pass it directly, don't save to BytesIO first |
+| 42 | LinkedIn certUrl rejects localhost — use window.location.origin | Works correctly on production Vercel URL automatically |
 
 ---
 
@@ -325,3 +333,4 @@ payments (id SERIAL PRIMARY KEY, user_id TEXT UNIQUE, user_email TEXT, amount_pa
 | Aug 17, 2026 | Migrated to gpt-oss-120b, baseline assessment, markdown fix, robust JSON | d2fd18e |
 | Aug 27, 2026 | Quiz agent JSON parser fixed, Kroki diagrams, fake viseme lipsync, TTS cleanForSpeech(), sentence-by-sentence TTS, course completion screen, animation test lab (parked) | ddae005, 32eaa04, 20dd6a0 |
 | Aug 28, 2026 | Payment gate persistence fixed (stale closure ref + Neon SSL retry + topics.length guard). Discovered PowerShell here-string trick. | — |
+| Aug 28, 2026 | Certificate PDF + QR code + verify page + LinkedIn integration. React Router installed. | b486c06 |
