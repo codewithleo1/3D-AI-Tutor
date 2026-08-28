@@ -125,7 +125,7 @@ CSS classes defined: `section-card`, `btn-primary`, `btn-success`, `option-btn`,
 ## What Needs to Be Built (Priority Order)
 
 ### 🔴 Critical Bugs
-1. **Returning paid users see payment gate again on refresh** — courseUnlocked resets on page refresh. Need to check payments table in Neon DB on Supabase login to restore unlock state.
+1. ✅ **Returning paid users see payment gate again on refresh** — FIXED Aug 28 — courseUnlocked resets on page refresh. Need to check payments table in Neon DB on Supabase login to restore unlock state.
 
 ### 🟡 High Priority (portfolio impact)
 2. **Mixamo animation upgrade** — download real FBX animations from mixamo.com (Idle, Talking, Explaining, Pointing, Happy, Thinking). Wire into AvatarController.jsx. Will replace current procedural baked clips.
@@ -284,6 +284,9 @@ payments (id SERIAL PRIMARY KEY, user_id TEXT UNIQUE, user_email TEXT, amount_pa
 | 35 | idle2 clip causes Nova to look down | Use idleName only while speaking — idle2 bends upper body forward |
 | 36 | Talk clips cause flying hands | Use idle-only while speaking — jaw/mouth lipsync shows she's talking |
 | 37 | Duplicate import in App.jsx causes parse error | Check for duplicate imports before saving |
+| 38 | Neon drops idle connections after ~5 min — SSL EOF error | Add reconnect retry in get_connection() — catch OperationalError and reconnect once |
+| 39 | React state captured in callbacks is stale (courseUnlocked always false) | Use useRef alongside useState for values read inside event handlers |
+| 40 | Old localStorage roadmap has modules with undefined topics — crashes on .length | Use m.topics?.length || 0 everywhere roadmap is reduced |
 
 ---
 
@@ -321,3 +324,4 @@ payments (id SERIAL PRIMARY KEY, user_id TEXT UNIQUE, user_email TEXT, amount_pa
 | Aug 16, 2026 | Supabase auth, Razorpay payment gate, promo codes, real payment tested | b532745+ |
 | Aug 17, 2026 | Migrated to gpt-oss-120b, baseline assessment, markdown fix, robust JSON | d2fd18e |
 | Aug 27, 2026 | Quiz agent JSON parser fixed, Kroki diagrams, fake viseme lipsync, TTS cleanForSpeech(), sentence-by-sentence TTS, course completion screen, animation test lab (parked) | ddae005, 32eaa04, 20dd6a0 |
+| Aug 28, 2026 | Payment gate persistence fixed (stale closure ref + Neon SSL retry + topics.length guard). Discovered PowerShell here-string trick. | — |
