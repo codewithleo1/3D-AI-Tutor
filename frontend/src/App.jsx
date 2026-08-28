@@ -11,6 +11,7 @@ import PaymentGate from "./pages/PaymentGate"
 import { useSpeech } from "./hooks/useSpeech"
 import BaselineAssessment from "./pages/BaselineAssessment"
 import AnimationTest from "./pages/AnimationTest"
+import CertificateActions from "./components/CertificateActions"
 
 
 const API = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000/api"
@@ -247,8 +248,6 @@ export default function App() {
   // TEMP: animation test — remove before deploy
   if (window.location.hash === "#animtest") return <AnimationTest />
   
-  // TEMP: animation test — remove before deploy
-  if (window.location.hash === "#animtest") return <AnimationTest />
 
   // ─── PREREQUISITES SCREEN ────────────────────────────────────
   if (authLoading) return (
@@ -522,6 +521,10 @@ export default function App() {
 
           {/* Actions */}
           <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+            <CertificateActions
+              user={user}
+              roadmap={roadmap}
+            />
             <button
               className="btn-success"
               style={{ fontSize: "16px", padding: "16px" }}
@@ -855,6 +858,7 @@ export default function App() {
                     }}>
                     ✅ Finalize Roadmap
                   </button>
+
                   <button onClick={handleStartOver} style={{
                     padding: "14px 24px", borderRadius: "12px", fontWeight: 600,
                     fontSize: "14px", background: "#F3F4F6", color: "#6B7280",
