@@ -244,10 +244,7 @@ export default function App() {
   const completedTopics = roadmap
     ? roadmap.modules.slice(0, currentModuleIdx).reduce((a, m) => a + (m.topics?.length || 0), 0) + currentTopicIdx
     : 0
-  
-  // TEMP: animation test — remove before deploy
-  if (window.location.hash === "#animtest") return <AnimationTest />
-  
+
 
   // ─── PREREQUISITES SCREEN ────────────────────────────────────
   if (authLoading) return (
