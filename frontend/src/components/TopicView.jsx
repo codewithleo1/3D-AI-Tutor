@@ -1,8 +1,41 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import axios from "axios"
 import Editor from "@monaco-editor/react"
 
 const API = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000/api"
+
+// ── Pyodide code runner ──────────────────────────────────────
+function useCodeRunner() {
+  const pyodideRef = useRef(null)
+  const loadingRef = useRef(false)
+  const [pyReady, setPyReady] = useState(false)
+
+  useEffect(() => {
+    if (loadingRef.current || !window.loadPyodide) return
+    loadingRef.current = true
+    window.loadPyodide({ indexURL: "https://cdn.jsdelivr.net/pyodide/v0.25.1/full/" })
+      .then(py => {
+        pyodideRef.current = py
+        setPyReady(true)
+      })
+      .catch(() => {})
+  }, [])
+
+  async function runCode(code) {
+    if (!pyodideRef.current) return { output: "", error: "Python not ready yet. Try again in a moment." }
+    try {
+      let output = ""
+      pyodideRef.current.setStdout({ batched: (s) => { output += s + "\n" } })
+      pyodideRef.current.setStderr({ batched: (s) => { output += s + "\n" } })
+      await pyodideRef.current.runPythonAsync(code)
+      return { output: output.trim() || "(no output)", error: "" }
+    } catch (err) {
+      return { output: "", error: String(err) }
+    }
+  }
+
+  return { runCode, pyReady }
+}
 
 async function fetchDiagram(mermaidCode) {
   try {
@@ -39,8 +72,11 @@ export default function TopicView({
   topic, module: mod, course, level,
   onComplete, onSkip, onMoodChange, speak, stop, isSpeaking
 }) {
-  const subtopics = topic.subtopics || [topic.title]
-  const totalSubtopics = subtopics.length
+    const subtopics = topic.subtopics || [topic.title]
+    const totalSubtopics = subtopics.length
+    const { runCode, pyReady } = useCodeRunner()
+    const [codeOutputs, setCodeOutputs] = useState({})
+    const [codeRunning, setCodeRunning] = useState({})
 
   const [currentSubtopicIdx, setCurrentSubtopicIdx] = useState(0)
   const [subtopicHistory, setSubtopicHistory] = useState([])
@@ -498,31 +534,76 @@ export default function TopicView({
                   )}
 
                   {/* Code */}
-                  {msg.data.code && msg.data.code.trim() !== "" && (
-                    <div style={{ marginBottom: "16px", borderRadius: "16px",
-                      overflow: "hidden", border: "1.5px solid #E5E7EB" }}>
-                      <div style={{ background: "#1E1E1E", padding: "10px 16px",
-                        display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                        <span style={{ color: "#9CA3AF", fontSize: "12px", fontWeight: 600 }}>
-                          {msg.data.code_language?.toUpperCase() || "CODE"}
-                        </span>
-                        <span style={{ color: "#6B7280", fontSize: "11px" }}>
-                          Miss Nova's example
-                        </span>
+                  {msg.data.code && msg.data.code.trim() !== "" && (() => {
+                    const codeKey = `${idx}`
+                    const lang = msg.data.code_language || "python"
+                    const codeVal = msg.data.code.replace(/\\n/g, "\n")
+                    const out = codeOutputs[codeKey]
+                    const running = codeRunning[codeKey]
+                    const isPython = lang === "python"
+                    return (
+                      <div style={{ marginBottom: "16px", borderRadius: "16px",
+                        overflow: "hidden", border: "1.5px solid #E5E7EB" }}>
+                        <div style={{ background: "#1E1E1E", padding: "10px 16px",
+                          display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                          <span style={{ color: "#9CA3AF", fontSize: "12px", fontWeight: 600 }}>
+                            {lang.toUpperCase()}
+                          </span>
+                          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                            <span style={{ color: "#6B7280", fontSize: "11px" }}>
+                              Miss Nova's example
+                            </span>
+                            {isPython && (
+                              <button
+                                onClick={async () => {
+                                  setCodeRunning(prev => ({ ...prev, [codeKey]: true }))
+                                  setCodeOutputs(prev => ({ ...prev, [codeKey]: null }))
+                                  const result = await runCode(codeVal)
+                                  setCodeOutputs(prev => ({ ...prev, [codeKey]: result }))
+                                  setCodeRunning(prev => ({ ...prev, [codeKey]: false }))
+                                }}
+                                disabled={running || !pyReady}
+                                style={{
+                                  background: pyReady ? "#10B981" : "#6B7280",
+                                  color: "white", border: "none", borderRadius: "6px",
+                                  padding: "4px 12px", fontSize: "12px", fontWeight: 700,
+                                  cursor: pyReady ? "pointer" : "not-allowed",
+                                  opacity: running ? 0.6 : 1,
+                                }}>
+                                {running ? "Running..." : pyReady ? "▶ Run" : "Loading..."}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                        <Editor
+                          height="200px"
+                          language={lang}
+                          value={codeVal}
+                          theme="vs-dark"
+                          options={{
+                            readOnly: true, minimap: { enabled: false },
+                            fontSize: 14, lineNumbers: "on",
+                            scrollBeyondLastLine: false, wordWrap: "on",
+                          }}
+                        />
+                        {out && (
+                          <div style={{
+                            background: out.error ? "#1a0000" : "#0d1117",
+                            padding: "12px 16px", fontFamily: "JetBrains Mono, monospace",
+                            fontSize: "13px", lineHeight: 1.6, whiteSpace: "pre-wrap",
+                            color: out.error ? "#FF6B6B" : "#A8FF78",
+                            borderTop: "1px solid #333",
+                          }}>
+                            <span style={{ color: "#6B7280", fontSize: "11px",
+                              display: "block", marginBottom: "4px" }}>
+                              OUTPUT
+                            </span>
+                            {out.error || out.output}
+                          </div>
+                        )}
                       </div>
-                      <Editor
-                        height="200px"
-                        language={msg.data.code_language || "python"}
-                        value={msg.data.code.replace(/\\n/g, "\n")}
-                        theme="vs-dark"
-                        options={{
-                          readOnly: true, minimap: { enabled: false },
-                          fontSize: 14, lineNumbers: "on",
-                          scrollBeyondLastLine: false, wordWrap: "on",
-                        }}
-                      />
-                    </div>
-                  )}
+                    )
+                  })()}
 
                   {/* Check in */}
                   {msg.data.check_in && (

@@ -1,4 +1,7 @@
 import { useState, useEffect } from "react"
+import axios from "axios"
+
+const API = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000/api"
 
 export default function Sidebar({
   roadmap,
@@ -8,12 +11,21 @@ export default function Sidebar({
   onTopicSelect,
   isOpen,
   onClose,
+  userId,
 }) {
   const [expandedModules, setExpandedModules] = useState({})
+  const [streak, setStreak] = useState({ current_streak: 0, best_streak: 0 })
 
   useEffect(() => {
     setExpandedModules(prev => ({ ...prev, [currentModuleIdx]: true }))
   }, [currentModuleIdx])
+
+  useEffect(() => {
+    if (!userId) return
+    axios.get(`${API}/streak`, { params: { user_id: userId } })
+      .then(res => setStreak(res.data))
+      .catch(() => {})
+  }, [userId])
 
   function toggleModule(mi) {
     setExpandedModules(prev => ({ ...prev, [mi]: !prev[mi] }))
@@ -155,12 +167,26 @@ export default function Sidebar({
       <div style={{
         padding: "12px 16px", borderTop: "1.5px solid #F3F4F6",
         fontSize: "12px", color: "#6B7280",
-        display: "flex", justifyContent: "space-between",
       }}>
-        <span>✅ {completedCount} of {totalTopics} done</span>
-        <span style={{ color: "#7C3AED", fontWeight: 600 }}>
-          {Math.round((completedCount / totalTopics) * 100)}%
-        </span>
+        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
+          <span>✅ {completedCount} of {totalTopics} done</span>
+          <span style={{ color: "#7C3AED", fontWeight: 600 }}>
+            {Math.round((completedCount / totalTopics) * 100)}%
+          </span>
+        </div>
+        <div style={{
+          display: "flex", justifyContent: "space-between",
+          padding: "8px 12px", borderRadius: "10px",
+          background: streak.current_streak > 0 ? "#FFF7ED" : "#F9FAFB",
+          border: `1px solid ${streak.current_streak > 0 ? "#FED7AA" : "#E5E7EB"}`,
+        }}>
+          <span style={{ fontWeight: 600, color: streak.current_streak > 0 ? "#EA580C" : "#9CA3AF" }}>
+            🔥 {streak.current_streak} day streak
+          </span>
+          <span style={{ color: "#9CA3AF" }}>
+            Best: {streak.best_streak}
+          </span>
+        </div>
       </div>
     </div>
   )

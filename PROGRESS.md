@@ -295,6 +295,8 @@ payments (id SERIAL PRIMARY KEY, user_id TEXT UNIQUE, user_email TEXT, amount_pa
 | 40 | Old localStorage roadmap has modules with undefined topics — crashes on .length | Use m.topics?.length || 0 everywhere roadmap is reduced |
 | 41 | reportlab drawInlineImage() rejects BytesIO — pass PIL Image directly | qrcode.make() returns PIL Image — pass it directly, don't save to BytesIO first |
 | 42 | LinkedIn certUrl rejects localhost — use window.location.origin | Works correctly on production Vercel URL automatically |
+| 43 | Vercel env vars added after deployment — old build doesn't see them | Always redeploy after adding env vars to Vercel |
+| 44 | VITE_SUPABASE_URL saved as placeholder — Supabase unreachable | Copy exact URL from local .env, never type manually |
 
 ---
 
@@ -334,3 +336,4 @@ payments (id SERIAL PRIMARY KEY, user_id TEXT UNIQUE, user_email TEXT, amount_pa
 | Aug 27, 2026 | Quiz agent JSON parser fixed, Kroki diagrams, fake viseme lipsync, TTS cleanForSpeech(), sentence-by-sentence TTS, course completion screen, animation test lab (parked) | ddae005, 32eaa04, 20dd6a0 |
 | Aug 28, 2026 | Payment gate persistence fixed (stale closure ref + Neon SSL retry + topics.length guard). Discovered PowerShell here-string trick. | — |
 | Aug 28, 2026 | Certificate PDF + QR code + verify page + LinkedIn integration. React Router installed. | b486c06 |
+| Aug 29, 2026 | Deployed to Vercel + Render. Fixed missing VITE_SUPABASE_URL env var. All features live. | 8af8e63 |

@@ -213,6 +213,10 @@ export default function App() {
     const mod = roadmap.modules[currentModuleIdx]
     const nextTopicIdx = currentTopicIdx + 1
     markTopicComplete(currentModuleIdx, currentTopicIdx, roadmap)
+    // Update streak
+    if (user?.id) {
+      axios.post(`${API}/streak/update`, { user_id: user.id }).catch(() => {})
+    }
     if (nextTopicIdx < mod.topics.length) {
       setCurrentTopicIdx(nextTopicIdx)
     } else {
@@ -390,6 +394,7 @@ export default function App() {
             getTopicState={getTopicState}
             isOpen={sidebarOpen}
             onClose={() => setSidebarOpen(false)}
+            userId={user?.id}
             onTopicSelect={(mi, ti) => {
               setCurrentModuleIdx(mi)
               setCurrentTopicIdx(ti)
