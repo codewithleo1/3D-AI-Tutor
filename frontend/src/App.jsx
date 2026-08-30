@@ -112,6 +112,7 @@ export default function App() {
   // Restore payment status from DB on login
   useEffect(() => {
     if (!user) return
+    window.__userId = user.id
     async function checkPayment() {
       try {
         const res = await axios.get(`${API}/payments/status`, {

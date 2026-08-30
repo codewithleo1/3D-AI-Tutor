@@ -77,6 +77,8 @@ export default function TopicView({
     const { runCode, pyReady } = useCodeRunner()
     const [codeOutputs, setCodeOutputs] = useState({})
     const [codeRunning, setCodeRunning] = useState({})
+    const [confidenceGiven, setConfidenceGiven] = useState(false)
+    const [savingConfidence, setSavingConfidence] = useState(false)
 
   const [currentSubtopicIdx, setCurrentSubtopicIdx] = useState(0)
   const [subtopicHistory, setSubtopicHistory] = useState([])
@@ -106,6 +108,7 @@ export default function TopicView({
     setSubtopicHistory([])
     setMessages([])
     setPracticeEval(null)
+    setConfidenceGiven(false)
     loadTeaching(0, [])
   }, [topic.id])
 
@@ -680,17 +683,66 @@ export default function TopicView({
             </button>
           </div>
 
+          {/* Confidence rating — last subtopic only */}
+          {currentSubtopicIdx === totalSubtopics - 1 && !confidenceGiven && (
+            <div style={{
+              background: "#F9FAFB", border: "1.5px solid #E5E7EB",
+              borderRadius: "16px", padding: "20px", marginBottom: "16px"
+            }}>
+              <p style={{ fontWeight: 700, color: "#111827", fontSize: "14px",
+                marginBottom: "14px", textAlign: "center" }}>
+                How confident do you feel about this topic?
+              </p>
+              <div style={{ display: "flex", gap: "10px" }}>
+                {[
+                  { label: "😕 Not sure", value: 1, color: "#EF4444", bg: "#FEF2F2", border: "#FECACA" },
+                  { label: "🙂 Got it", value: 2, color: "#D97706", bg: "#FFF7ED", border: "#FED7AA" },
+                  { label: "🚀 Nailed it", value: 3, color: "#059669", bg: "#F0FDF4", border: "#BBF7D0" },
+                ].map(opt => (
+                  <button
+                    key={opt.value}
+                    disabled={savingConfidence}
+                    onClick={async () => {
+                      setSavingConfidence(true)
+                      const topicKey = `${topic.id}`
+                      try {
+                        await axios.post(`${API}/confidence/save`, {
+                          user_id: window.__userId || "",
+                          topic_key: topicKey,
+                          topic_title: topic.title,
+                          confidence: opt.value,
+                        })
+                      } catch { /* silently fail */ }
+                      setConfidenceGiven(true)
+                      setSavingConfidence(false)
+                      nextSubtopic()
+                    }}
+                    style={{
+                      flex: 1, padding: "12px 8px", borderRadius: "12px",
+                      border: `1.5px solid ${opt.border}`,
+                      background: opt.bg, color: opt.color,
+                      fontWeight: 700, fontSize: "13px", cursor: "pointer",
+                    }}>
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Subtopic navigation */}
           <div style={{ display: "flex", gap: "10px" }}>
-            <button
-              className="btn-success"
-              style={{ flex: 1, fontSize: "15px" }}
-              onClick={nextSubtopic}
-              disabled={followUpLoading}>
-              {currentSubtopicIdx < totalSubtopics - 1
-                ? `Got it — Next: ${subtopics[currentSubtopicIdx + 1]} →`
-                : "I understand — Let's practice ✏️"}
-            </button>
+            {(currentSubtopicIdx < totalSubtopics - 1 || confidenceGiven) && (
+              <button
+                className="btn-success"
+                style={{ flex: 1, fontSize: "15px" }}
+                onClick={nextSubtopic}
+                disabled={followUpLoading}>
+                {currentSubtopicIdx < totalSubtopics - 1
+                  ? `Got it — Next: ${subtopics[currentSubtopicIdx + 1]} →`
+                  : "I understand — Let's practice ✏️"}
+              </button>
+            )}
             <button onClick={onSkip} style={{
               padding: "14px 20px", borderRadius: "12px", fontWeight: 600,
               fontSize: "14px", background: "#F3F4F6", color: "#6B7280",

@@ -136,10 +136,10 @@ CSS classes defined: `section-card`, `btn-primary`, `btn-success`, `option-btn`,
 ### 🟡 High Priority (portfolio impact)
 2. **Mixamo animation upgrade** — download real FBX animations from mixamo.com (Idle, Talking, Explaining, Pointing, Happy, Thinking). Wire into AvatarController.jsx. Will replace current procedural baked clips.
 3. ✅ **Certificate PDF** on course completion — DONE Aug 28
-4. **Code execution** — student writes code in Monaco, clicks Run, sees output
+4. ✅ **Code execution** — student writes code in Monaco, clicks Run, sees output
 
 ### 🟠 Medium Priority
-5. Streak counter — days studied in a row, visible in sidebar
+5. ✅ Streak counter — days studied in a row, visible in sidebar
 6. Mobile polish — full mobile layout
 7. Confidence rating after each subtopic (1-3 self-report)
 8. Spaced repetition — 7-day review badge in sidebar
@@ -297,7 +297,7 @@ payments (id SERIAL PRIMARY KEY, user_id TEXT UNIQUE, user_email TEXT, amount_pa
 | 42 | LinkedIn certUrl rejects localhost — use window.location.origin | Works correctly on production Vercel URL automatically |
 | 43 | Vercel env vars added after deployment — old build doesn't see them | Always redeploy after adding env vars to Vercel |
 | 44 | VITE_SUPABASE_URL saved as placeholder — Supabase unreachable | Copy exact URL from local .env, never type manually |
-
+| 45 | streak.py used user_id instead of request.user_id in update_streak | Always use request.user_id inside POST endpoint functions |
 ---
 
 ## Coding Rules (Follow Every Session)
@@ -337,3 +337,4 @@ payments (id SERIAL PRIMARY KEY, user_id TEXT UNIQUE, user_email TEXT, amount_pa
 | Aug 28, 2026 | Payment gate persistence fixed (stale closure ref + Neon SSL retry + topics.length guard). Discovered PowerShell here-string trick. | — |
 | Aug 28, 2026 | Certificate PDF + QR code + verify page + LinkedIn integration. React Router installed. | b486c06 |
 | Aug 29, 2026 | Deployed to Vercel + Render. Fixed missing VITE_SUPABASE_URL env var. All features live. | 8af8e63 |
+| Aug 30, 2026 | Streak counter built - daily streak + best streak in sidebar. Fixed Vercel env vars. Deployed all features live. | 8c59b31 |
