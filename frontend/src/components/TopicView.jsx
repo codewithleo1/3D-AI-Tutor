@@ -427,7 +427,7 @@ export default function TopicView({
         }}>
           <div style={{ display: "flex", justifyContent: "space-between",
             alignItems: "center", marginBottom: "8px" }}>
-            <span style={{ fontSize: "12px", fontWeight: 700, color: "#7C3AED" }}>
+            <span style={{ fontSize: "12px", fontWeight: 700, color: "#7C3AED", whiteSpace: "nowrap" }}>
               Subtopic {currentSubtopicIdx + 1} of {totalSubtopics}
             </span>
             <span style={{ fontSize: "12px", color: "#6B7280" }}>
@@ -738,9 +738,9 @@ export default function TopicView({
                 style={{ flex: 1, fontSize: "15px" }}
                 onClick={nextSubtopic}
                 disabled={followUpLoading}>
-                {currentSubtopicIdx < totalSubtopics - 1
-                  ? `Got it — Next: ${subtopics[currentSubtopicIdx + 1]} →`
-                  : "I understand — Let's practice ✏️"}
+              {currentSubtopicIdx < totalSubtopics - 1
+                ? `Got it — Next →`
+                : "I understand — Let's practice ✏️"}
               </button>
             )}
             <button onClick={onSkip} style={{
