@@ -141,8 +141,8 @@ CSS classes defined: `section-card`, `btn-primary`, `btn-success`, `option-btn`,
 ### 🟠 Medium Priority
 5. ✅ Streak counter — days studied in a row, visible in sidebar
 6. ✅ Confidence rating — DONE Aug 30
-7. ✅ Spaced repetition DB — DONE Aug 30
-8. Spaced repetition — 7-day review badge in sidebar
+7. ✅ Spaced repetition — DONE Aug 31
+8. ✅ Mobile polish — DONE Aug 31
 
 ### 🟢 Later
 9. Admin dashboard
@@ -340,3 +340,4 @@ payments (id SERIAL PRIMARY KEY, user_id TEXT UNIQUE, user_email TEXT, amount_pa
 | Aug 29, 2026 | Deployed to Vercel + Render. Fixed missing VITE_SUPABASE_URL env var. All features live. | 8af8e63 |
 | Aug 30, 2026 | Streak counter built - daily streak + best streak in sidebar. Fixed Vercel env vars. Deployed all features live. | 8c59b31 |
 | Aug 30, 2026 | Confidence rating buttons after last subtopic. Spaced repetition DB table. | 5c574b3 |
+| Aug 31, 2026 | Spaced repetition review badges in sidebar. Confidence topic key fixed to mi-ti format. | 39e8c15 |

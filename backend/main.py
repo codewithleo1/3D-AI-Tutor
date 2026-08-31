@@ -11,6 +11,7 @@ from routes.baseline import router as baseline_router
 from routes.certificate import router as certificate_router
 from routes.streak import router as streak_router
 from routes.confidence import router as confidence_router
+from routes.xapi import router as xapi_router
 
 load_dotenv(dotenv_path=Path(__file__).parent / ".env")
 
@@ -31,6 +32,7 @@ app.include_router(baseline_router, prefix="/api")
 app.include_router(certificate_router, prefix="/api")
 app.include_router(streak_router, prefix="/api")
 app.include_router(confidence_router, prefix="/api")
+app.include_router(xapi_router, prefix="/api")
 
 @app.get("/health")
 def health():
