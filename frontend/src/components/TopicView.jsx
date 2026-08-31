@@ -69,7 +69,7 @@ function renderExplanation(text) {
 }
 
 export default function TopicView({
-  topic, module: mod, course, level,
+  topic, module: mod, course, level, topicKey,
   onComplete, onSkip, onMoodChange, speak, stop, isSpeaking
 }) {
     const subtopics = topic.subtopics || [topic.title]
@@ -704,11 +704,11 @@ export default function TopicView({
                     disabled={savingConfidence}
                     onClick={async () => {
                       setSavingConfidence(true)
-                      const topicKey = `${topic.id}`
+                      const key = topicKey || `${topic.id}`
                       try {
                         await axios.post(`${API}/confidence/save`, {
                           user_id: window.__userId || "",
-                          topic_key: topicKey,
+                          topic_key: key,
                           topic_title: topic.title,
                           confidence: opt.value,
                         })

@@ -140,8 +140,8 @@ CSS classes defined: `section-card`, `btn-primary`, `btn-success`, `option-btn`,
 
 ### 🟠 Medium Priority
 5. ✅ Streak counter — days studied in a row, visible in sidebar
-6. Mobile polish — full mobile layout
-7. Confidence rating after each subtopic (1-3 self-report)
+6. ✅ Confidence rating — DONE Aug 30
+7. ✅ Spaced repetition DB — DONE Aug 30
 8. Spaced repetition — 7-day review badge in sidebar
 
 ### 🟢 Later
@@ -298,6 +298,7 @@ payments (id SERIAL PRIMARY KEY, user_id TEXT UNIQUE, user_email TEXT, amount_pa
 | 43 | Vercel env vars added after deployment — old build doesn't see them | Always redeploy after adding env vars to Vercel |
 | 44 | VITE_SUPABASE_URL saved as placeholder — Supabase unreachable | Copy exact URL from local .env, never type manually |
 | 45 | streak.py used user_id instead of request.user_id in update_streak | Always use request.user_id inside POST endpoint functions |
+| 46 | confidenceGiven state not reset on topic change — buttons don't show on next topic | Add setConfidenceGiven(false) to the topic reset useEffect |
 ---
 
 ## Coding Rules (Follow Every Session)
@@ -338,3 +339,4 @@ payments (id SERIAL PRIMARY KEY, user_id TEXT UNIQUE, user_email TEXT, amount_pa
 | Aug 28, 2026 | Certificate PDF + QR code + verify page + LinkedIn integration. React Router installed. | b486c06 |
 | Aug 29, 2026 | Deployed to Vercel + Render. Fixed missing VITE_SUPABASE_URL env var. All features live. | 8af8e63 |
 | Aug 30, 2026 | Streak counter built - daily streak + best streak in sidebar. Fixed Vercel env vars. Deployed all features live. | 8c59b31 |
+| Aug 30, 2026 | Confidence rating buttons after last subtopic. Spaced repetition DB table. | 5c574b3 |

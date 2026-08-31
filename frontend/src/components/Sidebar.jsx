@@ -20,10 +20,12 @@ export default function Sidebar({
     setExpandedModules(prev => ({ ...prev, [currentModuleIdx]: true }))
   }, [currentModuleIdx])
 
+  const [dueTopics, setDueTopics] = useState([])
+
   useEffect(() => {
     if (!userId) return
-    axios.get(`${API}/streak`, { params: { user_id: userId } })
-      .then(res => setStreak(res.data))
+    axios.get(`${API}/confidence/due`, { params: { user_id: userId } })
+      .then(res => setDueTopics(res.data.due?.map(d => d.topic_key) || []))
       .catch(() => {})
   }, [userId])
 
@@ -147,6 +149,16 @@ export default function Sidebar({
                               lineHeight: 1.4,
                             }}>
                               {topic.title}
+                              {dueTopics.includes(`${mi}-${ti}`) && (
+                                <span style={{
+                                  marginLeft: "6px", fontSize: "10px", fontWeight: 700,
+                                  background: "#FFF7ED", color: "#EA580C",
+                                  border: "1px solid #FED7AA", borderRadius: "6px",
+                                  padding: "1px 6px",
+                                }}>
+                                  🔁 Review
+                                </span>
+                              )}
                             </p>
                             <p style={{ fontSize: "11px", color: "#9CA3AF", marginTop: "2px" }}>
                               {topic.estimated_minutes}m

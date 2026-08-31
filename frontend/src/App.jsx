@@ -409,6 +409,7 @@ export default function App() {
                 module={mod}
                 course={roadmap}
                 level={level}
+                topicKey={`${currentModuleIdx}-${currentTopicIdx}`}
                 onComplete={handleTopicComplete}
                 onSkip={handleTopicSkip}
                 onMoodChange={setAvatarMood}
