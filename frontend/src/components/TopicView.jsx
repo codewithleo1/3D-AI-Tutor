@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react"
 import axios from "axios"
 import Editor from "@monaco-editor/react"
+import { track } from "../lib/xapi"
 
 const API = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000/api"
 
@@ -79,6 +80,7 @@ export default function TopicView({
     const [codeRunning, setCodeRunning] = useState({})
     const [confidenceGiven, setConfidenceGiven] = useState(false)
     const [savingConfidence, setSavingConfidence] = useState(false)
+    const subtopicStartRef = useRef(null)
 
   const [currentSubtopicIdx, setCurrentSubtopicIdx] = useState(0)
   const [subtopicHistory, setSubtopicHistory] = useState([])
@@ -168,6 +170,17 @@ export default function TopicView({
         setMessages(prev => [...prev, { role: "nova", data }])
       }
       setPhase("teaching")
+      subtopicStartRef.current = Date.now()
+      // xAPI — subtopic started
+      track("progressed", {
+        type: "subtopic",
+        id: `${topic.id}-${subtopicIdx}`,
+        name: currentSubtopic,
+      }, {}, {
+        course: course.title,
+        module: mod.title,
+        subtopic: currentSubtopic,
+      })
     } catch {
       setError("Miss Nova had trouble loading this topic. Please try again.")
       setPhase("teaching")
@@ -254,9 +267,25 @@ export default function TopicView({
   }
 
   function nextSubtopic() {
+    // Track time spent on this subtopic
+    const durationSeconds = subtopicStartRef.current
+      ? Math.round((Date.now() - subtopicStartRef.current) / 1000)
+      : null
+    track("completed", {
+      type: "subtopic",
+      id: `${topic.id}-${currentSubtopicIdx}`,
+      name: subtopics[currentSubtopicIdx],
+    }, {
+      completion: true,
+      duration: durationSeconds,
+    }, {
+      course: course.title,
+      module: mod.title,
+      subtopic: subtopics[currentSubtopicIdx],
+    })
+
     const nextIdx = currentSubtopicIdx + 1
     if (nextIdx >= totalSubtopics) {
-      // All subtopics done — go to practice
       loadPractice()
     } else {
       setCurrentSubtopicIdx(nextIdx)
@@ -338,6 +367,33 @@ export default function TopicView({
       })
       setResults(res.data.results)
       setPhase("result")
+      // xAPI — quiz result
+      track(res.data.results.ready_to_advance ? "passed" : "failed", {
+        type: "quiz",
+        id: topic.id,
+        name: topic.title,
+      }, {
+        success: res.data.results.ready_to_advance,
+        score: res.data.results.score,
+        completion: true,
+      }, {
+        course: course.title,
+        module: mod.title,
+      })
+      // Track individual answers
+      res.data.results.results.forEach(r => {
+        track("answered", {
+          type: "question",
+          id: `${topic.id}-q${r.question_id}`,
+          name: `${topic.title} Q${r.question_id}`,
+        }, {
+          success: r.passed,
+          completion: true,
+        }, {
+          course: course.title,
+          module: mod.title,
+        })
+      })
     } catch {
       setError("Failed to evaluate quiz. Please try again.")
     } finally {

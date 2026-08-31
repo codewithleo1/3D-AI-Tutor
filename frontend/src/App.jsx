@@ -12,6 +12,7 @@ import { useSpeech } from "./hooks/useSpeech"
 import BaselineAssessment from "./pages/BaselineAssessment"
 import AnimationTest from "./pages/AnimationTest"
 import CertificateActions from "./components/CertificateActions"
+import { track } from "./lib/xapi"
 
 
 const API = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000/api"
@@ -113,6 +114,11 @@ export default function App() {
   useEffect(() => {
     if (!user) return
     window.__userId = user.id
+    window.__xapiUser = {
+      id: user.id,
+      email: user.email,
+      name: user.user_metadata?.full_name || user.email,
+    }
     async function checkPayment() {
       try {
         const res = await axios.get(`${API}/payments/status`, {
@@ -212,12 +218,22 @@ export default function App() {
 
   function handleTopicComplete() {
     const mod = roadmap.modules[currentModuleIdx]
+    const topic = mod.topics[currentTopicIdx]
     const nextTopicIdx = currentTopicIdx + 1
     markTopicComplete(currentModuleIdx, currentTopicIdx, roadmap)
     // Update streak
     if (user?.id) {
       axios.post(`${API}/streak/update`, { user_id: user.id }).catch(() => {})
     }
+    // xAPI tracking
+    track("completed", {
+      type: "topic",
+      id: `${currentModuleIdx}-${currentTopicIdx}`,
+      name: topic.title,
+    }, { completion: true }, {
+      course: roadmap.title,
+      module: mod.title,
+    })
     if (nextTopicIdx < mod.topics.length) {
       setCurrentTopicIdx(nextTopicIdx)
     } else {
@@ -239,6 +255,16 @@ export default function App() {
   }
 
   function handleTopicSkip() {
+    const mod = roadmap.modules[currentModuleIdx]
+    const topic = mod.topics[currentTopicIdx]
+    track("skipped", {
+      type: "topic",
+      id: `${currentModuleIdx}-${currentTopicIdx}`,
+      name: topic.title,
+    }, { completion: false }, {
+      course: roadmap.title,
+      module: mod.title,
+    })
     handleTopicComplete()
   }
 
