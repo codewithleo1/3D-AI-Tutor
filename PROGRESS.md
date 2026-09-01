@@ -145,7 +145,7 @@ CSS classes defined: `section-card`, `btn-primary`, `btn-success`, `option-btn`,
 8. ✅ Mobile polish — DONE Aug 31
 
 ### 🟢 Later
-9. Admin dashboard
+9. ✅ Admin dashboard — DONE Aug 31
 10. Dark mode
 11. Note taking per topic
 
@@ -168,6 +168,7 @@ CSS classes defined: `section-card`, `btn-primary`, `btn-success`, `option-btn`,
 │       │   ├── AvatarController.jsx       🔒 new controller (parked — needs Mixamo FBX)
 │       │   ├── Prerequisites.jsx          ✅ setup guide screen
 │       │   ├── Sidebar.jsx                ✅ module/topic nav, lock states
+│       │   ├── CertificateActions.jsx     ✅ download + LinkedIn + copy
 │       │   └── TopicView.jsx              ✅ subtopic teaching + Kroki diagrams + practice + quiz + repair
 │       ├── config/
 │       │   └── animations.js              🔒 animation clip config (parked)
@@ -177,34 +178,42 @@ CSS classes defined: `section-card`, `btn-primary`, `btn-success`, `option-btn`,
 │       │   ├── useProceduralIdle.js       🔒 breathing + blink (parked)
 │       │   └── useSpeech.js               ✅ TTS + Whisper + cleanForSpeech()
 │       ├── lib/
-│       │   └── supabase.js                ✅ Supabase client
+│       │   ├── supabase.js                 ✅
+│       │   ├── xapi.js                     ✅ xAPI tracking helper
+│       │   └── supabase.js                 ✅ Supabase client
 │       ├── pages/
-│       │   ├── AnimationTest.jsx          🔒 animation test lab (#animtest route, parked)
-│       │   ├── AuthPage.jsx               ✅ Supabase login/signup
-│       │   ├── BaselineAssessment.jsx     ✅ 5 MCQ knowledge check + module skip
-│       │   └── PaymentGate.jsx            ✅ Razorpay Rs.1 + promo codes
+│       │   ├── AdminPage.jsx               ✅ password protected admin dashboard
+│       │   ├── VerifyPage.jsx              ✅ public certificate verify page
+│       │   ├── AnimationTest.jsx           🔒 animation test lab (#animtest route, parked)
+│       │   ├── AuthPage.jsx                ✅ Supabase login/signup
+│       │   ├── BaselineAssessment.jsx      ✅ 5 MCQ knowledge check + module skip
+│       │   └── PaymentGate.jsx             ✅ Razorpay Rs.1 + promo codes
 │       └── utils/
 │           ├── retargetMixamoAnimation.js 🔒 Mixamo retargeting util (parked)
 │           └── session.js                 ✅ session UUID generator
 │
 ├── backend/
-│   ├── main.py                            ✅ FastAPI app + CORS + all routers
-│   ├── pyproject.toml                     ✅ uv dependencies
-│   ├── requirements.txt                   ✅ Render deployment dependencies
+│   ├── main.py                             ✅ FastAPI app + CORS + all routers
+│   ├── pyproject.toml                      ✅ uv dependencies
+│   ├── requirements.txt                    ✅ Render deployment dependencies
+│   ├── certificate.py                      ✅
+│   ├── streak.py                           ✅
+│   ├── confidence.py                       ✅
+│   ├── xapi.py                             ✅ xAPI statements + admin endpoints
 │   ├── agents/
-│   │   ├── roadmap_agent.py               ✅ curriculum generation + subtopics
-│   │   ├── teaching_agent.py              ✅ subtopic-aware + Kroki diagram generation
-│   │   ├── quiz_agent.py                  ✅ generate + evaluate + repair + robust JSON parser
-│   │   ├── prerequisites_agent.py         ✅ tool setup guide
-│   │   └── baseline_agent.py              ✅ 5 MCQ baseline + score evaluation
+│   │   ├── roadmap_agent.py                ✅ curriculum generation + subtopics
+│   │   ├── teaching_agent.py               ✅ subtopic-aware + Kroki diagram generation
+│   │   ├── quiz_agent.py                   ✅ generate + evaluate + repair + robust JSON parser
+│   │   ├── prerequisites_agent.py          ✅ tool setup guide
+│   │   └── baseline_agent.py               ✅ 5 MCQ baseline + score evaluation
 │   ├── db/
-│   │   ├── neon.py                        ✅ PostgreSQL connection
-│   │   └── queries.py                     ✅ DB queries
+│   │   ├── neon.py                         ✅ PostgreSQL connection
+│   │   └── queries.py                      ✅ DB queries
 │   └── routes/
-│       ├── chat.py                        ✅ POST /api/roadmap
-│       ├── teaching.py                    ✅ POST /api/teach + quiz + prereqs + transcribe
-│       ├── payments.py                    ✅ POST /api/payments/* + promo codes
-│       └── baseline.py                    ✅ POST /api/baseline/generate + evaluate
+│       ├── chat.py                         ✅ POST /api/roadmap
+│       ├── teaching.py                     ✅ POST /api/teach + quiz + prereqs + transcribe
+│       ├── payments.py                     ✅ POST /api/payments/* + promo codes
+│       └── baseline.py                     ✅ POST /api/baseline/generate + evaluate
 │
 ├── PROGRESS.md
 ├── .gitignore
@@ -235,6 +244,16 @@ CSS classes defined: `section-card`, `btn-primary`, `btn-success`, `option-btn`,
 | POST | `/api/progress/save` | Save progress to DB |
 | POST | `/api/progress/load` | Load progress from DB |
 | GET | `/health` | Health check |
+| POST | `/api/certificate/generate` | Generate PDF certificate with QR code |
+| GET  | `/api/certificate/verify` | Verify certificate by UUID code |
+| POST | `/api/streak/update` | Update daily streak on topic complete |
+| GET  | `/api/streak` | Get current + best streak for user |
+| POST | `/api/confidence/save` | Save confidence rating after last subtopic |
+| GET  | `/api/confidence/due` | Get topics due for spaced repetition review |
+| POST | `/api/xapi/statement` | Record xAPI learning statement |
+| GET  | `/api/admin/dashboard` | Aggregated stats (password protected) |
+| GET  | `/api/admin/students` | All students with summary (password protected) |
+| GET  | `/api/admin/student/{user_id}` | Full xAPI timeline for one student |
 
 ---
 
@@ -245,6 +264,10 @@ sessions (id TEXT PRIMARY KEY, goal TEXT, level TEXT, created_at TIMESTAMP)
 courses (id TEXT PRIMARY KEY, session_id TEXT, roadmap JSONB, created_at TIMESTAMP)
 progress (id SERIAL PRIMARY KEY, session_id TEXT, course_id TEXT, completed_topics JSONB, current_module INTEGER, current_topic INTEGER, updated_at TIMESTAMP, UNIQUE(session_id, course_id))
 payments (id SERIAL PRIMARY KEY, user_id TEXT UNIQUE, user_email TEXT, amount_paise INTEGER, promo_code TEXT, status TEXT, razorpay_order_id TEXT, razorpay_payment_id TEXT, paid_at TIMESTAMP, created_at TIMESTAMP)
+certificates (id, verify_code UUID, student_name, user_id, course_title, completed_at)
+streaks (id, user_id UNIQUE, current_streak, best_streak, last_study_date)
+topic_confidence (id, user_id, topic_key, confidence, last_reviewed, next_review)
+xapi_statements (id, user_id, user_email, user_name, verb, object_type, object_id, object_name, result_success, result_completion, result_duration_seconds, result_score, context_course, context_module, context_subtopic, timestamp)
 ```
 
 ---
@@ -299,6 +322,7 @@ payments (id SERIAL PRIMARY KEY, user_id TEXT UNIQUE, user_email TEXT, amount_pa
 | 44 | VITE_SUPABASE_URL saved as placeholder — Supabase unreachable | Copy exact URL from local .env, never type manually |
 | 45 | streak.py used user_id instead of request.user_id in update_streak | Always use request.user_id inside POST endpoint functions |
 | 46 | confidenceGiven state not reset on topic change — buttons don't show on next topic | Add setConfidenceGiven(false) to the topic reset useEffect |
+| 47 | xAPI user context not available in TopicView — used window.__xapiUser global | Set window.__xapiUser on login in App.jsx useEffect |
 ---
 
 ## Coding Rules (Follow Every Session)
@@ -341,3 +365,4 @@ payments (id SERIAL PRIMARY KEY, user_id TEXT UNIQUE, user_email TEXT, amount_pa
 | Aug 30, 2026 | Streak counter built - daily streak + best streak in sidebar. Fixed Vercel env vars. Deployed all features live. | 8c59b31 |
 | Aug 30, 2026 | Confidence rating buttons after last subtopic. Spaced repetition DB table. | 5c574b3 |
 | Aug 31, 2026 | Spaced repetition review badges in sidebar. Confidence topic key fixed to mi-ti format. | 39e8c15 |
+| Aug 31, 2026 | xAPI tracking - full student journey recorded. Admin dashboard with timeline, stats, skip rate, time-on-task. | 8666b49 |

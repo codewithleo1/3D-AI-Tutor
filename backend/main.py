@@ -34,6 +34,7 @@ app.include_router(streak_router, prefix="/api")
 app.include_router(confidence_router, prefix="/api")
 app.include_router(xapi_router, prefix="/api")
 
+
 @app.get("/health")
 def health():
     try:
