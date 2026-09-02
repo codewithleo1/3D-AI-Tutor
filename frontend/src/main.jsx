@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import VerifyPage from './pages/VerifyPage'
 import AdminPage from './pages/AdminPage'
 import LandingPage from './pages/LandingPage'
+import MyCoursesPage from './pages/MyCoursesPage'
 
 const isAvatarDebug = new URLSearchParams(window.location.search).has('debugAvatar')
 

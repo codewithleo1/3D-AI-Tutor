@@ -13,6 +13,7 @@ import BaselineAssessment from "./pages/BaselineAssessment"
 import AnimationTest from "./pages/AnimationTest"
 import CertificateActions from "./components/CertificateActions"
 import { track } from "./lib/xapi"
+import MyCoursesPage from "./pages/MyCoursesPage"
 
 
 const API = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000/api"
@@ -66,6 +67,10 @@ export default function App() {
       setAuthLoading(false)
     })
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (_event === "SIGNED_OUT") {
+        window.location.href = "/"
+        return
+      }
       setUser(session?.user ?? null)
     })
     return () => subscription.unsubscribe()
@@ -87,6 +92,7 @@ export default function App() {
   const [showBaseline, setShowBaseline] = useState(false)
   const [baselineResult, setBaselineResult] = useState(null)
   const [showCompletion, setShowCompletion] = useState(false)
+  const [showCourses, setShowCourses] = useState(true)
   
   
 
@@ -217,6 +223,7 @@ export default function App() {
   }
 
   function handleTopicComplete() {
+    stop()
     const mod = roadmap.modules[currentModuleIdx]
     const topic = mod.topics[currentTopicIdx]
     const nextTopicIdx = currentTopicIdx + 1
@@ -285,7 +292,41 @@ export default function App() {
     </div>
   )
 
-  if (!user) return <AuthPage onAuth={setUser} />
+  if (showCourses && !teaching && !roadmap) {
+    return (
+      <MyCoursesPage
+        user={user}
+        onContinue={async (course) => {
+          // Load the full course with roadmap from DB
+          try {
+            const res = await axios.get(`${API}/courses/${course.id}`, {
+              params: { user_id: user.id }
+            })
+            const data = res.data
+            setRoadmap(data.roadmap)
+            setCurrentModuleIdx(data.current_module || 0)
+            setCurrentTopicIdx(data.current_topic || 0)
+            setFinalized(true)
+            setTeaching(true)
+            setShowCourses(false)
+            // Store initial subtopic to pass to TopicView
+            window.__resumeSubtopic = data.current_subtopic || 0
+            // Clear localStorage so it doesn't override DB state
+            localStorage.removeItem("miss-nova-progress")
+            // Update last accessed
+            axios.patch(`${API}/courses/${course.id}/accessed`, null, {
+              params: { user_id: user.id }
+            }).catch(() => {})
+          } catch {
+            setShowCourses(false)
+          }
+        }}
+        onStartNew={() => {
+          setShowCourses(false)
+        }}
+      />
+    )
+  }
   
   if (showBaseline && roadmap && !teaching) {
     return (
@@ -392,12 +433,12 @@ export default function App() {
               className="topic-counter">
               Topic {completedTopics + 1} of {totalTopics}
             </span>
-            <button onClick={() => setTeaching(false)} style={{
+            <button onClick={() => { stop(); setTeaching(false); setRoadmap(null); setShowCourses(true) }} style={{
               fontSize: "14px", padding: "8px 16px", borderRadius: "10px",
               background: "#F3F4F6", color: "#6B7280", border: "1.5px solid #E5E7EB",
               cursor: "pointer", fontWeight: 600
             }}>
-              ← Roadmap
+              🏠 My Courses
             </button>
           </div>
         </nav>
@@ -436,6 +477,7 @@ export default function App() {
                 course={roadmap}
                 level={level}
                 topicKey={`${currentModuleIdx}-${currentTopicIdx}`}
+                initialSubtopicIdx={window.__resumeSubtopic || 0}
                 onComplete={handleTopicComplete}
                 onSkip={handleTopicSkip}
                 onMoodChange={setAvatarMood}
@@ -598,7 +640,17 @@ export default function App() {
             style={{ background: "#F3F4F6", color: "#6B7280" }}>
             AI Learning Companion
           </span>
-          <button onClick={() => supabase.auth.signOut()} style={{
+          <button onClick={() => { setShowCourses(true); setRoadmap(null) }} style={{
+            fontSize: "14px", padding: "8px 16px", borderRadius: "10px",
+            background: "#F3F4F6", color: "#6B7280", border: "1.5px solid #E5E7EB",
+            cursor: "pointer", fontWeight: 600
+          }}>
+            🏠 My Courses
+          </button>
+          <button onClick={async () => {
+            await supabase.auth.signOut()
+            window.location.href = "/"
+          }} style={{
             fontSize: "14px", padding: "8px 16px", borderRadius: "10px",
             background: "#F3F4F6", color: "#6B7280", border: "1.5px solid #E5E7EB",
             cursor: "pointer", fontWeight: 600
@@ -885,6 +937,11 @@ export default function App() {
                     onClick={async () => {
                       await initProgress(roadmap, goal, level)
                       setFinalized(true)
+                      track("launched", {
+                        type: "course",
+                        id: roadmap.title,
+                        name: roadmap.title,
+                      }, {}, { course: roadmap.title })
                     }}>
                     ✅ Finalize Roadmap
                   </button>

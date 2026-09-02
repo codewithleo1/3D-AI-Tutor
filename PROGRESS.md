@@ -22,8 +22,8 @@
 
 ## Current Status
 
-Last worked on: August 27, 2026
-Next session goal: Fix returning paid users seeing payment gate again on refresh
+Last worked on: September 1, 2026
+Next session goal: README + further polish
 
 ---
 
@@ -126,6 +126,14 @@ CSS classes defined: `section-card`, `btn-primary`, `btn-success`, `option-btn`,
 - AnimationTest page at #animtest route
 - Parked until real Mixamo FBX files downloaded from mixamo.com
 
+### Landing Page
+- Landing page at / with hero, features, how it works, CTA
+- 3D Nova avatar appears after 2s and speaks welcome message
+- Admin link in nav for demo visibility
+- Public stats (learners + certificates) from DB
+- Logged-in users auto-redirect to /app
+- App moved to /app route
+
 ---
 
 ## What Needs to Be Built (Priority Order)
@@ -178,7 +186,7 @@ CSS classes defined: `section-card`, `btn-primary`, `btn-success`, `option-btn`,
 │       │   ├── useProceduralIdle.js       🔒 breathing + blink (parked)
 │       │   └── useSpeech.js               ✅ TTS + Whisper + cleanForSpeech()
 │       ├── lib/
-│       │   ├── supabase.js                 ✅
+│       │   ├── supabase.js                 ✅ Supabase client
 │       │   ├── xapi.js                     ✅ xAPI tracking helper
 │       │   └── supabase.js                 ✅ Supabase client
 │       ├── pages/
@@ -210,11 +218,14 @@ CSS classes defined: `section-card`, `btn-primary`, `btn-success`, `option-btn`,
 │   │   ├── neon.py                         ✅ PostgreSQL connection
 │   │   └── queries.py                      ✅ DB queries
 │   └── routes/
-│       ├── chat.py                         ✅ POST /api/roadmap
-│       ├── teaching.py                     ✅ POST /api/teach + quiz + prereqs + transcribe
-│       ├── payments.py                     ✅ POST /api/payments/* + promo codes
-│       └── baseline.py                     ✅ POST /api/baseline/generate + evaluate
-│
+│       ├── chat.py                    ✅
+│       ├── teaching.py                ✅
+│       ├── payments.py                ✅
+│       ├── baseline.py                ✅
+│       ├── certificate.py             ✅
+│       ├── streak.py                  ✅
+│       ├── confidence.py              ✅
+│       └── xapi.py                    ✅ xAPI statements + admin endpoints
 ├── PROGRESS.md
 ├── .gitignore
 └── README.md
@@ -254,6 +265,7 @@ CSS classes defined: `section-card`, `btn-primary`, `btn-success`, `option-btn`,
 | GET  | `/api/admin/dashboard` | Aggregated stats (password protected) |
 | GET  | `/api/admin/students` | All students with summary (password protected) |
 | GET  | `/api/admin/student/{user_id}` | Full xAPI timeline for one student |
+| GET  | `/api/stats` | Public learner + certificate counts for landing page |
 
 ---
 
@@ -323,6 +335,9 @@ xapi_statements (id, user_id, user_email, user_name, verb, object_type, object_i
 | 45 | streak.py used user_id instead of request.user_id in update_streak | Always use request.user_id inside POST endpoint functions |
 | 46 | confidenceGiven state not reset on topic change — buttons don't show on next topic | Add setConfidenceGiven(false) to the topic reset useEffect |
 | 47 | xAPI user context not available in TopicView — used window.__xapiUser global | Set window.__xapiUser on login in App.jsx useEffect |
+| 48 | Avatar mood "encouraging" triggers happy dance on landing page | Use "explaining" mood for stable standing pose |
+| 49 | Duplicate imports in LandingPage.jsx — new imports added on top of existing | Always check top of file for existing imports before adding new ones |
+| 50 | main.py content overwritten with frontend JSX code | Always verify file content before saving — use VS Code not PowerShell for large files |
 ---
 
 ## Coding Rules (Follow Every Session)
@@ -366,3 +381,4 @@ xapi_statements (id, user_id, user_email, user_name, verb, object_type, object_i
 | Aug 30, 2026 | Confidence rating buttons after last subtopic. Spaced repetition DB table. | 5c574b3 |
 | Aug 31, 2026 | Spaced repetition review badges in sidebar. Confidence topic key fixed to mi-ti format. | 39e8c15 |
 | Aug 31, 2026 | xAPI tracking - full student journey recorded. Admin dashboard with timeline, stats, skip rate, time-on-task. | 8666b49 |
+| Sep 1, 2026 | Landing page with 3D avatar speaking intro, admin link in nav, public stats, auth redirect flow. | cd02a07 |

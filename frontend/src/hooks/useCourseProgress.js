@@ -64,6 +64,7 @@ export function useCourseProgress() {
 
     try {
       const res = await axios.post(`${API}/progress/save-course`, {
+        user_id: window.__userId || "",
         goal: goal || "",
         level: level || "",
         roadmap,

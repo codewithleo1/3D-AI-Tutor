@@ -71,6 +71,7 @@ function renderExplanation(text) {
 
 export default function TopicView({
   topic, module: mod, course, level, topicKey,
+  initialSubtopicIdx = 0,
   onComplete, onSkip, onMoodChange, speak, stop, isSpeaking
 }) {
     const subtopics = topic.subtopics || [topic.title]
@@ -81,8 +82,15 @@ export default function TopicView({
     const [confidenceGiven, setConfidenceGiven] = useState(false)
     const [savingConfidence, setSavingConfidence] = useState(false)
     const subtopicStartRef = useRef(null)
+  
+  // Stop speech when component unmounts or user navigates away
+  useEffect(() => {
+    return () => {
+      window.speechSynthesis?.cancel()
+    }
+  }, [])
 
-  const [currentSubtopicIdx, setCurrentSubtopicIdx] = useState(0)
+  const [currentSubtopicIdx, setCurrentSubtopicIdx] = useState(initialSubtopicIdx)
   const [subtopicHistory, setSubtopicHistory] = useState([])
   const [teaching, setTeaching] = useState(null)
   const [messages, setMessages] = useState([])
@@ -106,12 +114,15 @@ export default function TopicView({
 
   // Reset everything when topic changes
   useEffect(() => {
-    setCurrentSubtopicIdx(0)
+    const startIdx = initialSubtopicIdx || 0
+    setCurrentSubtopicIdx(startIdx)
     setSubtopicHistory([])
     setMessages([])
     setPracticeEval(null)
     setConfidenceGiven(false)
-    loadTeaching(0, [])
+    loadTeaching(startIdx, [])
+    // Clear after first use
+    window.__resumeSubtopic = 0
   }, [topic.id])
 
  // Speak when new teaching arrives
@@ -788,15 +799,35 @@ export default function TopicView({
 
           {/* Subtopic navigation */}
           <div style={{ display: "flex", gap: "10px" }}>
+            {/* Previous subtopic button */}
+            {currentSubtopicIdx > 0 && (
+              <button
+                onClick={() => {
+                  const prevIdx = currentSubtopicIdx - 1
+                  setCurrentSubtopicIdx(prevIdx)
+                  setSubtopicHistory([])
+                  setMessages([])
+                  loadTeaching(prevIdx, [])
+                }}
+                disabled={followUpLoading}
+                style={{
+                  padding: "14px 16px", borderRadius: "12px", fontWeight: 600,
+                  fontSize: "14px", background: "#F3F4F6", color: "#374151",
+                  border: "1.5px solid #E5E7EB", cursor: "pointer"
+                }}>
+                ← Prev
+              </button>
+            )}
+
             {(currentSubtopicIdx < totalSubtopics - 1 || confidenceGiven) && (
               <button
                 className="btn-success"
                 style={{ flex: 1, fontSize: "15px" }}
                 onClick={nextSubtopic}
                 disabled={followUpLoading}>
-              {currentSubtopicIdx < totalSubtopics - 1
-                ? `Got it — Next →`
-                : "I understand — Let's practice ✏️"}
+                {currentSubtopicIdx < totalSubtopics - 1
+                  ? `Got it — Next →`
+                  : "I understand — Let's practice ✏️"}
               </button>
             )}
             <button onClick={onSkip} style={{

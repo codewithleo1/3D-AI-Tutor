@@ -31,22 +31,24 @@ def save_course(session_id: str, roadmap: dict) -> str:
 
 
 def save_progress(session_id: str, course_id: str,
-                  completed_topics: list, current_module: int, current_topic: int):
+                  completed_topics: list, current_module: int, current_topic: int,
+                  current_subtopic: int = 0):
     """Save or update learning progress."""
     with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute("""
                 INSERT INTO progress (session_id, course_id, completed_topics,
-                                      current_module, current_topic, updated_at)
-                VALUES (%s, %s, %s, %s, %s, NOW())
+                                      current_module, current_topic, current_subtopic, updated_at)
+                VALUES (%s, %s, %s, %s, %s, %s, NOW())
                 ON CONFLICT (session_id, course_id)
                 DO UPDATE SET
                     completed_topics = EXCLUDED.completed_topics,
                     current_module = EXCLUDED.current_module,
                     current_topic = EXCLUDED.current_topic,
+                    current_subtopic = EXCLUDED.current_subtopic,
                     updated_at = NOW()
             """, (session_id, course_id, completed_topics,
-                  current_module, current_topic))
+                  current_module, current_topic, current_subtopic))
             conn.commit()
 
 
@@ -70,7 +72,7 @@ def load_latest_progress(session_id: str):
         with conn.cursor() as cur:
             cur.execute("""
                 SELECT p.completed_topics, p.current_module, p.current_topic,
-                       c.roadmap, c.id as course_id
+                       p.current_subtopic, c.roadmap, c.id as course_id
                 FROM progress p
                 JOIN courses c ON c.id = p.course_id
                 WHERE p.session_id = %s

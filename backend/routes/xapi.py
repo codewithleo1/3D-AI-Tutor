@@ -244,3 +244,19 @@ def get_student_journey(user_id: str, authorization: Optional[str] = Header(None
         return {"user_id": user_id, "timeline": timeline}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/stats")
+def get_public_stats():
+    """Public stats for landing page."""
+    try:
+        conn = get_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT COUNT(DISTINCT user_id) as total FROM xapi_statements")
+        students = cur.fetchone()["total"]
+        cur.execute("SELECT COUNT(*) as total FROM certificates")
+        certificates = cur.fetchone()["total"]
+        cur.close()
+        conn.close()
+        return {"students": students, "certificates": certificates}
+    except Exception:
+        return {"students": 0, "certificates": 0}
