@@ -22,8 +22,8 @@
 
 ## Current Status
 
-Last worked on: September 2, 2026
-Next session goal: Fix course resume, save subtopic progress, user profile page
+Last worked on: September 5, 2026
+Next session goal: User Profile page — achievements, badges, certificates list. README for GitHub.
 
 ---
 
@@ -345,6 +345,9 @@ courses — added user_id TEXT, title TEXT, goal TEXT, level TEXT, is_completed 
 | 51 | GET /api/courses/{id} 500 — missing current_subtopic in JOIN | Add p.current_subtopic to SELECT in get_course query |
 | 52 | Nova keeps speaking after navigation | Use window.speechSynthesis?.cancel() in TopicView useEffect cleanup |
 | 53 | MyCoursesPage logout navigated to / without signOut | Must call supabase.auth.signOut() before navigate("/") |
+| 54 | current_subtopic not saved when clicking My Courses — only saved on Next/Prev | Track currentSubtopicIdx in App.jsx state, save to DB on My Courses button click |
+| 55 | load_progress_route used undefined `p` instead of `result` | Use result["key"] dict access throughout load_progress_route |
+| 56 | courses.py had unused variables roadmap_modules and roadmap_topics | Remove dead variable assignments — ruff catches these |
 ---
 
 ## Coding Rules (Follow Every Session)
@@ -390,3 +393,4 @@ courses — added user_id TEXT, title TEXT, goal TEXT, level TEXT, is_completed 
 | Aug 31, 2026 | xAPI tracking - full student journey recorded. Admin dashboard with timeline, stats, skip rate, time-on-task. | 8666b49 |
 | Sep 1, 2026 | Landing page with 3D avatar speaking intro, admin link in nav, public stats, auth redirect flow. | cd02a07 |
 | Sep 2, 2026 | My Courses dashboard (max 3 courses, delete, continue). Subtopic persistence + navigation arrows. Resume from exact subtopic. | pending |
+| Sep 5, 2026 | Subtopic resume flow complete — save current_subtopic to DB on navigate + page leave. Fixed ruff errors in courses.py and teaching.py. | 24a3897 |
