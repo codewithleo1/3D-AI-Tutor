@@ -100,6 +100,7 @@ export default function App() {
   const [teaching, setTeaching] = useState(false)
   const [currentModuleIdx, setCurrentModuleIdx] = useState(0)
   const [currentTopicIdx, setCurrentTopicIdx] = useState(0)
+  const [currentSubtopicIdx, setCurrentSubtopicIdx] = useState(0)
   const [avatarMood, setAvatarMood] = useState("idle")
   const { speak, stop, isSpeaking, currentViseme, isRecording, startRecording, stopRecording } = useSpeech()
   
@@ -113,6 +114,7 @@ export default function App() {
     getTopicState,
     jumpToTopic,
     clearProgress,
+    syncSubtopic,
   } = useCourseProgress()
 
 
@@ -433,7 +435,7 @@ export default function App() {
               className="topic-counter">
               Topic {completedTopics + 1} of {totalTopics}
             </span>
-            <button onClick={() => { stop(); setTeaching(false); setRoadmap(null); setShowCourses(true) }} style={{
+            <button onClick={() => { stop(); syncSubtopic(currentModuleIdx, currentTopicIdx, currentSubtopicIdx); setTeaching(false); setRoadmap(null); setShowCourses(true) }} style={{
               fontSize: "14px", padding: "8px 16px", borderRadius: "10px",
               background: "#F3F4F6", color: "#6B7280", border: "1.5px solid #E5E7EB",
               cursor: "pointer", fontWeight: 600
@@ -481,6 +483,10 @@ export default function App() {
                 onComplete={handleTopicComplete}
                 onSkip={handleTopicSkip}
                 onMoodChange={setAvatarMood}
+                onSubtopicChange={(idx) => {
+                  setCurrentSubtopicIdx(idx)
+                  syncSubtopic(currentModuleIdx, currentTopicIdx, idx)
+                }}
                 speak={speak}
                 stop={stop}
                 isSpeaking={isSpeaking}

@@ -2,7 +2,6 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 from db.neon import get_connection
-import json
 
 router = APIRouter()
 
@@ -44,8 +43,6 @@ def get_my_courses(user_id: str):
 
         courses = []
         for r in rows:
-            roadmap_modules = 0
-            roadmap_topics = 0
             completed = len(r["completed_topics"] or [])
 
             courses.append({

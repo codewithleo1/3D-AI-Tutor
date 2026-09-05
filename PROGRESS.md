@@ -22,8 +22,8 @@
 
 ## Current Status
 
-Last worked on: September 1, 2026
-Next session goal: README + further polish
+Last worked on: September 2, 2026
+Next session goal: Fix course resume, save subtopic progress, user profile page
 
 ---
 
@@ -195,7 +195,8 @@ CSS classes defined: `section-card`, `btn-primary`, `btn-success`, `option-btn`,
 │       │   ├── AnimationTest.jsx           🔒 animation test lab (#animtest route, parked)
 │       │   ├── AuthPage.jsx                ✅ Supabase login/signup
 │       │   ├── BaselineAssessment.jsx      ✅ 5 MCQ knowledge check + module skip
-│       │   └── PaymentGate.jsx             ✅ Razorpay Rs.1 + promo codes
+│       │   ├── PaymentGate.jsx             ✅ Razorpay Rs.1 + promo codes
+│       │   └── MyCoursesPage.jsx           ✅ multi-course dashboard   
 │       └── utils/
 │           ├── retargetMixamoAnimation.js 🔒 Mixamo retargeting util (parked)
 │           └── session.js                 ✅ session UUID generator
@@ -225,7 +226,8 @@ CSS classes defined: `section-card`, `btn-primary`, `btn-success`, `option-btn`,
 │       ├── certificate.py             ✅
 │       ├── streak.py                  ✅
 │       ├── confidence.py              ✅
-│       └── xapi.py                    ✅ xAPI statements + admin endpoints
+│       ├── xapi.py                    ✅ xAPI statements + admin endpoints
+│       └── courses.py                 ✅ GET/DELETE/PATCH course endpoints
 ├── PROGRESS.md
 ├── .gitignore
 └── README.md
@@ -280,6 +282,8 @@ certificates (id, verify_code UUID, student_name, user_id, course_title, complet
 streaks (id, user_id UNIQUE, current_streak, best_streak, last_study_date)
 topic_confidence (id, user_id, topic_key, confidence, last_reviewed, next_review)
 xapi_statements (id, user_id, user_email, user_name, verb, object_type, object_id, object_name, result_success, result_completion, result_duration_seconds, result_score, context_course, context_module, context_subtopic, timestamp)
+progress — added current_subtopic INTEGER DEFAULT 0
+courses — added user_id TEXT, title TEXT, goal TEXT, level TEXT, is_completed BOOLEAN, last_accessed TIMESTAMP
 ```
 
 ---
@@ -338,6 +342,9 @@ xapi_statements (id, user_id, user_email, user_name, verb, object_type, object_i
 | 48 | Avatar mood "encouraging" triggers happy dance on landing page | Use "explaining" mood for stable standing pose |
 | 49 | Duplicate imports in LandingPage.jsx — new imports added on top of existing | Always check top of file for existing imports before adding new ones |
 | 50 | main.py content overwritten with frontend JSX code | Always verify file content before saving — use VS Code not PowerShell for large files |
+| 51 | GET /api/courses/{id} 500 — missing current_subtopic in JOIN | Add p.current_subtopic to SELECT in get_course query |
+| 52 | Nova keeps speaking after navigation | Use window.speechSynthesis?.cancel() in TopicView useEffect cleanup |
+| 53 | MyCoursesPage logout navigated to / without signOut | Must call supabase.auth.signOut() before navigate("/") |
 ---
 
 ## Coding Rules (Follow Every Session)
@@ -382,3 +389,4 @@ xapi_statements (id, user_id, user_email, user_name, verb, object_type, object_i
 | Aug 31, 2026 | Spaced repetition review badges in sidebar. Confidence topic key fixed to mi-ti format. | 39e8c15 |
 | Aug 31, 2026 | xAPI tracking - full student journey recorded. Admin dashboard with timeline, stats, skip rate, time-on-task. | 8666b49 |
 | Sep 1, 2026 | Landing page with 3D avatar speaking intro, admin link in nav, public stats, auth redirect flow. | cd02a07 |
+| Sep 2, 2026 | My Courses dashboard (max 3 courses, delete, continue). Subtopic persistence + navigation arrows. Resume from exact subtopic. | pending |

@@ -201,12 +201,12 @@ def load_progress_route(request: LoadProgressRequest):
         return {
             "success": True,
             "progress": {
-                "roadmap": p.roadmap,
-                "completed_topics": p.completed_topics,
-                "current_module": p.current_module,
-                "current_topic": p.current_topic,
-                "current_subtopic": p.get("current_subtopic", 0),
-                "course_id": p.course_id,
+                "roadmap": result["roadmap"],
+                "completed_topics": result["completed_topics"],
+                "current_module": result["current_module"],
+                "current_topic": result["current_topic"],
+                "current_subtopic": result.get("current_subtopic", 0),
+                "course_id": result["course_id"],
             }
         }
     except Exception as e:

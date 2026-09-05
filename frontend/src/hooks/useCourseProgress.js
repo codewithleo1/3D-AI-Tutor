@@ -28,11 +28,24 @@ export function useCourseProgress() {
         completed_topics: data.completedTopics,
         current_module: data.currentModule,
         current_topic: data.currentTopic,
+        current_subtopic: data.currentSubtopic || 0,
       })
     } catch {
       // Silently fail — localStorage is the source of truth
     }
   }
+
+  const syncSubtopic = useCallback((mi, ti, subtopicIdx) => {
+    if (!progress?.courseId || !progress?.sessionId) return
+    axios.post(`${API}/progress/save`, {
+      session_id: progress.sessionId,
+      course_id: progress.courseId,
+      completed_topics: progress.completedTopics || [],
+      current_module: mi,
+      current_topic: ti,
+      current_subtopic: subtopicIdx,
+    }).catch(() => {})
+  }, [progress])
 
   const loadFromDb = useCallback(async () => {
     const sessionId = localStorage.getItem("miss-nova-session-id")
@@ -161,5 +174,6 @@ export function useCourseProgress() {
     getTopicState,
     jumpToTopic,
     clearProgress,
+    syncSubtopic,
   }
 }

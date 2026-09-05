@@ -72,7 +72,7 @@ function renderExplanation(text) {
 export default function TopicView({
   topic, module: mod, course, level, topicKey,
   initialSubtopicIdx = 0,
-  onComplete, onSkip, onMoodChange, speak, stop, isSpeaking
+  onComplete, onSkip, onMoodChange, onSubtopicChange, speak, stop, isSpeaking
 }) {
     const subtopics = topic.subtopics || [topic.title]
     const totalSubtopics = subtopics.length
@@ -300,6 +300,7 @@ export default function TopicView({
       loadPractice()
     } else {
       setCurrentSubtopicIdx(nextIdx)
+      onSubtopicChange?.(nextIdx)
       setSubtopicHistory([])
       setMessages([])
       loadTeaching(nextIdx, [])
