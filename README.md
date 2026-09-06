@@ -223,42 +223,64 @@ xapi_statements (id, user_id, verb, object_type, object_id, object_name,
 
 ```
 3D-AI-Tutor/
+├── screenshots/                     # README screenshots
 ├── frontend/
+│   ├── index.html                   # Pyodide CDN script tag
+│   ├── vercel.json                  # client-side routing fix
 │   └── src/
 │       ├── App.jsx                  # auth + routing + teaching mode
+│       ├── main.jsx                 # React root + BrowserRouter
+│       ├── index.css                # brand system + CSS vars
 │       ├── components/
-│       │   ├── Avatar.jsx           # RPM 3D avatar with mood + lipsync
-│       │   ├── Sidebar.jsx          # module/topic nav with lock states
-│       │   └── TopicView.jsx        # full teaching loop (6 phases)
+│       │   ├── Avatar.jsx           # RPM 3D avatar, mood + lipsync
+│       │   ├── Sidebar.jsx          # module/topic nav, lock states
+│       │   ├── TopicView.jsx        # full teaching loop (6 phases)
+│       │   ├── Prerequisites.jsx    # tool setup guide screen
+│       │   └── CertificateActions.jsx  # download + LinkedIn + copy
 │       ├── hooks/
 │       │   ├── useCourseProgress.js # localStorage + Neon DB sync
 │       │   └── useSpeech.js         # TTS + Whisper + cleanForSpeech()
-│       └── pages/
-│           ├── LandingPage.jsx      # public landing with live Nova
-│           ├── AuthPage.jsx         # Supabase login/signup
-│           ├── MyCoursesPage.jsx    # multi-course dashboard
-│           ├── ProfilePage.jsx      # stats, certs, activity
-│           ├── PaymentGate.jsx      # Razorpay + promo codes
-│           ├── BaselineAssessment.jsx
-│           └── AdminPage.jsx        # password-protected dashboard
+│       ├── lib/
+│       │   ├── supabase.js          # Supabase client
+│       │   └── xapi.js              # xAPI tracking helper
+│       ├── pages/
+│       │   ├── LandingPage.jsx      # public landing with live Nova
+│       │   ├── AuthPage.jsx         # Supabase login/signup
+│       │   ├── MyCoursesPage.jsx    # multi-course dashboard (max 3)
+│       │   ├── ProfilePage.jsx      # stats, certs, activity, confidence
+│       │   ├── PaymentGate.jsx      # Razorpay Rs.1 + promo codes
+│       │   ├── BaselineAssessment.jsx  # 5 MCQ + module skip
+│       │   ├── AdminPage.jsx        # password-protected dashboard
+│       │   └── VerifyPage.jsx       # public certificate verify
+│       └── utils/
+│           └── session.js           # session UUID generator
 │
-└── backend/
-    ├── main.py                      # FastAPI + CORS + all routers
-    ├── agents/
-    │   ├── roadmap_agent.py         # curriculum generation
-    │   ├── teaching_agent.py        # subtopic-aware lesson + Kroki
-    │   ├── quiz_agent.py            # generate + evaluate + repair
-    │   ├── baseline_agent.py        # 5 MCQ assessment
-    │   └── prerequisites_agent.py   # tool setup guide
-    └── routes/
-        ├── teaching.py              # teach + quiz + practice + progress
-        ├── payments.py              # Razorpay + promo codes
-        ├── certificate.py           # PDF + QR + verify
-        ├── courses.py               # CRUD for user courses
-        ├── profile.py               # all user stats in one endpoint
-        ├── streak.py                # daily streak
-        ├── confidence.py            # spaced repetition
-        └── xapi.py                  # learning analytics + admin
+├── backend/
+│   ├── main.py                      # FastAPI + CORS + all routers
+│   ├── requirements.txt             # Render deployment deps
+│   ├── agents/
+│   │   ├── roadmap_agent.py         # curriculum generation
+│   │   ├── teaching_agent.py        # subtopic-aware lesson + Kroki
+│   │   ├── quiz_agent.py            # generate + evaluate + repair
+│   │   ├── baseline_agent.py        # 5 MCQ assessment
+│   │   └── prerequisites_agent.py   # tool setup guide
+│   ├── db/
+│   │   ├── neon.py                  # PostgreSQL connection + reconnect
+│   │   └── queries.py               # DB queries
+│   └── routes/
+│       ├── chat.py                  # POST /api/roadmap
+│       ├── teaching.py              # teach + quiz + practice + progress
+│       ├── payments.py              # Razorpay + promo codes
+│       ├── baseline.py              # baseline assessment
+│       ├── certificate.py           # PDF + QR + verify
+│       ├── courses.py               # CRUD for user courses
+│       ├── profile.py               # all user stats in one endpoint
+│       ├── streak.py                # daily streak
+│       ├── confidence.py            # spaced repetition
+│       └── xapi.py                  # learning analytics + admin
+│
+├── README.md
+└── .gitignore
 ```
 
 ---

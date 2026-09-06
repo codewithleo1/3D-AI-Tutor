@@ -22,8 +22,8 @@
 
 ## Current Status
 
-Last worked on: September 5, 2026
-Next session goal: User Profile page — achievements, badges, certificates list. README for GitHub.
+Last worked on: September 6, 2026
+Next session goal: Take screenshots for README, add forgot password to AuthPage, deploy and verify all features on live site
 
 ---
 
@@ -348,6 +348,8 @@ courses — added user_id TEXT, title TEXT, goal TEXT, level TEXT, is_completed 
 | 54 | current_subtopic not saved when clicking My Courses — only saved on Next/Prev | Track currentSubtopicIdx in App.jsx state, save to DB on My Courses button click |
 | 55 | load_progress_route used undefined `p` instead of `result` | Use result["key"] dict access throughout load_progress_route |
 | 56 | courses.py had unused variables roadmap_modules and roadmap_topics | Remove dead variable assignments — ruff catches these |
+| 58 | profile.py queried topic_title column which doesn't exist in topic_confidence | Use topic_key only, derive display name with .replace("-"," ").title() |
+| 59 | profile.py used jsonb_array_length on completed_topics which is text[] not jsonb | Use array_length(completed_topics, 1) instead |
 ---
 
 ## Coding Rules (Follow Every Session)
@@ -394,3 +396,4 @@ courses — added user_id TEXT, title TEXT, goal TEXT, level TEXT, is_completed 
 | Sep 1, 2026 | Landing page with 3D avatar speaking intro, admin link in nav, public stats, auth redirect flow. | cd02a07 |
 | Sep 2, 2026 | My Courses dashboard (max 3 courses, delete, continue). Subtopic persistence + navigation arrows. Resume from exact subtopic. | pending |
 | Sep 5, 2026 | Subtopic resume flow complete — save current_subtopic to DB on navigate + page leave. Fixed ruff errors in courses.py and teaching.py. | 24a3897 |
+| Sep 6, 2026 | Profile page complete — hero, stats, certificates, activity, confidence map. Fixed profile.py DB queries (topic_title column, jsonb vs array). README.md added. vercel.json routing fix. | 94f2e35 |
