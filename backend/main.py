@@ -13,6 +13,7 @@ from routes.streak import router as streak_router
 from routes.confidence import router as confidence_router
 from routes.xapi import router as xapi_router
 from routes.courses import router as courses_router
+from routes.profile import router as profile_router
 
 load_dotenv(dotenv_path=Path(__file__).parent / ".env")
 
@@ -35,6 +36,7 @@ app.include_router(streak_router, prefix="/api")
 app.include_router(confidence_router, prefix="/api")
 app.include_router(xapi_router, prefix="/api")
 app.include_router(courses_router, prefix="/api")
+app.include_router(profile_router, prefix="/api")
 
 
 @app.get("/health")

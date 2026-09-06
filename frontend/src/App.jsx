@@ -14,6 +14,7 @@ import AnimationTest from "./pages/AnimationTest"
 import CertificateActions from "./components/CertificateActions"
 import { track } from "./lib/xapi"
 import MyCoursesPage from "./pages/MyCoursesPage"
+import ProfilePage from "./pages/ProfilePage"
 
 
 const API = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000/api"
@@ -93,6 +94,7 @@ export default function App() {
   const [baselineResult, setBaselineResult] = useState(null)
   const [showCompletion, setShowCompletion] = useState(false)
   const [showCourses, setShowCourses] = useState(true)
+  const [showProfile, setShowProfile] = useState(false)
   
   
 
@@ -294,10 +296,20 @@ export default function App() {
     </div>
   )
 
+    if (showProfile) {
+    return (
+      <ProfilePage
+        user={user}
+        onBack={() => setShowProfile(false)}
+      />
+    )
+  }
+
   if (showCourses && !teaching && !roadmap) {
     return (
       <MyCoursesPage
         user={user}
+        onProfile={() => setShowProfile(true)}
         onContinue={async (course) => {
           // Load the full course with roadmap from DB
           try {
@@ -441,6 +453,13 @@ export default function App() {
               cursor: "pointer", fontWeight: 600
             }}>
               🏠 My Courses
+            </button>
+            <button onClick={() => { stop(); setShowProfile(true) }} style={{
+              fontSize: "14px", padding: "8px 16px", borderRadius: "10px",
+              background: "#F3F4F6", color: "#6B7280", border: "1.5px solid #E5E7EB",
+              cursor: "pointer", fontWeight: 600
+            }}>
+              👤 Profile
             </button>
           </div>
         </nav>

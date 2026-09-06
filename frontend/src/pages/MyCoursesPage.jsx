@@ -32,7 +32,7 @@ function ProgressBar({ value, max }) {
   )
 }
 
-export default function MyCoursesPage({ user, onContinue, onStartNew }) {
+export default function MyCoursesPage({ user, onContinue, onStartNew, onProfile }) {
   const [courses, setCourses] = useState([])
   const [loading, setLoading] = useState(true)
   const [deleting, setDeleting] = useState(null)
@@ -86,6 +86,15 @@ export default function MyCoursesPage({ user, onContinue, onStartNew }) {
             {user?.user_metadata?.full_name || user?.email}
           </span>
           <button
+            onClick={onProfile}
+            style={{
+              fontSize: "13px", padding: "8px 16px", borderRadius: "10px",
+              background: "#F3F4F6", color: "#6B7280",
+              border: "1.5px solid #E5E7EB", cursor: "pointer", fontWeight: 600
+            }}>
+            👤 Profile
+          </button>
+          <button
             onClick={async () => {
               await supabase.auth.signOut()
               window.location.href = "/"
@@ -132,7 +141,6 @@ export default function MyCoursesPage({ user, onContinue, onStartNew }) {
                 borderRadius: "20px", padding: "24px", marginBottom: "16px",
                 position: "relative"
               }}>
-                {/* Delete confirm overlay */}
                 {confirmDelete === course.id && (
                   <div style={{
                     position: "absolute", inset: 0, background: "rgba(255,255,255,0.95)",
